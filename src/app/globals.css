@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Theme tokens
+   Default (root) = dark theme, matching the LuxFitness-style
+   reference: near-black surfaces, gold/amber accent.
+   .light overrides flip it to a light theme.
+   Values are "R G B" so Tailwind can apply alpha via
+   rgb(var(--color-x) / <alpha-value>)
+   ============================================================ */
+:root {
+  --color-background: 13 14 18;       /* #0D0E12 */
+  --color-surface: 23 25 31;          /* #17191F */
+  --color-surface-hover: 30 33 41;    /* #1E2129 */
+  --color-border: 40 43 53;           /* #282B35 */
+  --color-foreground: 237 238 240;    /* #EDEEF0 */
+  --color-muted: 142 146 160;         /* #8E92A0 */
+  --color-accent: 240 196 77;         /* #F0C44D */
+  --color-accent-dark: 212 168 56;    /* #D4A838 */
+}
+
+.light {
+  --color-background: 246 247 249;    /* #F6F7F9 */
+  --color-surface: 255 255 255;       /* #FFFFFF */
+  --color-surface-hover: 240 241 244; /* #F0F1F4 */
+  --color-border: 226 228 233;        /* #E2E4E9 */
+  --color-foreground: 23 25 31;       /* #17191F */
+  --color-muted: 110 114 128;         /* #6E7280 */
+  --color-accent: 212 158 23;         /* #D49E17 */
+  --color-accent-dark: 184 134 17;    /* #B88611 */
+}
+
+* {
+  border-color: rgb(var(--color-border));
+}
+
+body {
+  background-color: rgb(var(--color-background));
+  color: rgb(var(--color-foreground));
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
