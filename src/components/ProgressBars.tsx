@@ -1,19 +1,19 @@
-// Placeholder goals — Phase B/C will pull real targets vs. actuals
-// from workout_sessions / meals (and later Weekly Reviews).
-const goals = [
-  { label: "Weekly Workouts", current: 4, target: 5, unit: "sessions" },
-  { label: "Daily Protein Avg", current: 142, target: 170, unit: "g" },
-  { label: "Weekly Run Mileage", current: 6.2, target: 10, unit: "mi" },
-];
+interface Goal {
+  label: string;
+  current: number;
+  target: number;
+  unit: string;
+}
 
-export default function ProgressBars() {
+interface Props {
+  goals: Goal[];
+}
+
+export default function ProgressBars({ goals }: Props) {
   return (
     <div className="rounded-2xl border border-border bg-surface p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold">This Week&apos;s Targets</h3>
-        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">
-          Sample data
-        </span>
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold">This Week&apos;s Rep Targets</h3>
       </div>
       <div className="flex flex-col gap-4">
         {goals.map(({ label, current, target, unit }) => {
@@ -23,7 +23,7 @@ export default function ProgressBars() {
               <div className="mb-1 flex items-center justify-between text-sm">
                 <span>{label}</span>
                 <span className="text-muted">
-                  {current} / {target} {unit}
+                  {current.toLocaleString()} / {target.toLocaleString()} {unit}
                 </span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-surface-hover">
