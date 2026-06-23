@@ -4,6 +4,7 @@ import ProgressBars from "@/components/ProgressBars";
 import Sidebar from "@/components/Sidebar";
 import StatCard from "@/components/StatCard";
 import WeeklyVolumeChart from "@/components/WeeklyVolumeChart";
+import MoodWeekStrip from "@/components/MoodWeekStrip";
 import {
   getWeeklyRepTotals,
   getWeeklySessionCount,
@@ -11,6 +12,7 @@ import {
   getLastSession,
   REP_TARGETS,
 } from "@/lib/workouts";
+import { getWeekMood } from "@/lib/mental";
 
 export default async function DashboardPage() {
   const today = new Date().toLocaleDateString("en-US", {
@@ -19,11 +21,14 @@ export default async function DashboardPage() {
     day: "numeric",
   });
 
-  const [repTotals, sessionCount, volumeByDay, lastSession] = await Promise.all([
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  const [repTotals, sessionCount, volumeByDay, lastSession, weekMood] = await Promise.all([
     getWeeklyRepTotals(),
     getWeeklySessionCount(),
     getWeeklyVolumeByDay(),
     getLastSession(),
+    getWeekMood(),
   ]);
 
   const totalWeeklyVolume = volumeByDay.reduce((sum, d) => sum + d.volume, 0);
@@ -95,23 +100,22 @@ export default async function DashboardPage() {
           <NextSessionPanel lastSession={lastSession} />
         </section>
 
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <ProgressBars goals={repGoals} />
           </div>
-          <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-5 text-sm text-muted">
-            <h3 className="text-sm font-semibold text-foreground">
-              Phase B — Live
-            </h3>
-            <p>
-              Workout logging is live. Head to{" "}
-              <a href="/workouts" className="text-accent hover:underline">
-                Workouts
-              </a>{" "}
-              to log a session and see your rep targets update in real time.
-              Nutrition (Phase C) coming next.
-            </p>
+        </section>
+
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Mental Health · This Week
+            </h2>
+            <a href="/mental-health" className="text-xs text-accent hover:underline">
+              Log today →
+            </a>
           </div>
+          <MoodWeekStrip days={weekMood} today={todayStr} />
         </section>
       </main>
     </div>
