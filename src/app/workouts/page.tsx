@@ -143,9 +143,17 @@ export default async function WorkoutsPage() {
                           })}
                         </p>
                       </div>
-                      <span className="text-xs text-muted">
-                        {totalReps.toLocaleString()} total reps
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted">
+                          {totalReps.toLocaleString()} total reps
+                        </span>
+                        <Link
+                          href={`/workouts/${date}`}
+                          className="rounded-lg px-3 py-1 text-xs font-medium text-accent transition hover:bg-accent/10"
+                        >
+                          Edit
+                        </Link>
+                      </div>
                     </div>
 
                     <div className="flex flex-col gap-2">

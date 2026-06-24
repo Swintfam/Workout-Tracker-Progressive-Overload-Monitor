@@ -19,8 +19,8 @@ const SESSION_TO_MUSCLE: Record<string, string> = {
 
 const EXERCISE_SUGGESTIONS: Record<string, string[]> = {
   Abs: ["Hanging Leg Raises", "Dragon Flag", "Ab Wheel", "Plank", "Hollow Body Hold", "L-Sit", "Toes to Bar", "V-Ups", "Flutter Kicks", "Dead Bug"],
-  Pull: ["Pull-Ups", "Chin-Ups", "Rows", "Lat Pulldown", "Face Pulls", "Muscle-Up Negatives", "Australian Pull-Ups", "Cable Rows", "Deadlift", "Hammer Curls"],
-  Push: ["Push-Ups", "Dips", "Bench Press", "Overhead Press", "Incline Press", "Tricep Pushdown", "Diamond Push-Ups", "Pike Push-Ups", "Chest Fly", "Lateral Raises"],
+  Pull: ["Pull-Ups", "Wide Grip Pull-Up", "Archer Pull-Up", "Chin-Ups", "Australian Pull-Ups", "Muscle-Up", "Muscle-Up Negative", "Rows", "Cable Rows", "Lat Pulldown", "Face Pulls", "Deadlift", "Hammer Curls"],
+  Push: ["Push-Ups", "Dips", "Bench Press", "Overhead Press", "Incline Press", "Iron Cross", "Tricep Pushdown", "Diamond Push-Ups", "Pike Push-Ups", "Chest Fly", "Lateral Raises"],
   Legs: ["Squats", "Lunges", "Romanian Deadlift", "Leg Press", "Calf Raises", "Bulgarian Split Squat", "Hip Thrust", "Leg Extensions", "Hamstring Curl", "Box Jumps"],
   "Full Body": ["Burpees", "Thrusters", "Turkish Get-Up", "Kettlebell Swings", "Man Makers"],
 };

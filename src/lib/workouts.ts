@@ -189,6 +189,20 @@ export async function getRecentSessions(limit = 30) {
   return data ?? [];
 }
 
+export async function getSessionByDate(date: string) {
+  const admin = getDbClient();
+  const userId = await getEffectiveUserId();
+
+  const { data } = await admin
+    .from("workout_sessions")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .order("created_at", { ascending: true });
+
+  return data ?? [];
+}
+
 export async function getLastSession() {
   const admin = getDbClient();
   const userId = await getEffectiveUserId();
