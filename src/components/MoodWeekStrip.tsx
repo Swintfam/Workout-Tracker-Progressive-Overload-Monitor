@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { MOOD_COLORS } from "@/lib/mental";
-import type { WeekMoodDay } from "@/lib/mental";
+import { MOOD_COLORS } from "@/lib/mood-colors";
+import type { WeekMoodDay } from "@/lib/mood-colors";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 

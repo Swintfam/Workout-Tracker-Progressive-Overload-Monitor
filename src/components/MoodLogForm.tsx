@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MOOD_COLORS } from "@/lib/mental";
-import type { MoodLog } from "@/lib/mental";
+import { MOOD_COLORS } from "@/lib/mood-colors";
+import type { MoodLog } from "@/lib/mood-colors";
 
 const RATINGS = [1, 2, 3, 4, 5] as const;
 

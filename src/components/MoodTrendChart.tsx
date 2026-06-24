@@ -10,7 +10,7 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
-import type { MoodTrendPoint } from "@/lib/mental";
+import type { MoodTrendPoint } from "@/lib/mood-colors";
 
 interface Props {
   data: MoodTrendPoint[];

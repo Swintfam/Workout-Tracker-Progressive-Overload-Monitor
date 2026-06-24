@@ -4,7 +4,8 @@ import Sidebar from "@/components/Sidebar";
 import MoodLogForm from "@/components/MoodLogForm";
 import MoodTrendChart from "@/components/MoodTrendChart";
 import MoodWeekStrip from "@/components/MoodWeekStrip";
-import { getWeekMood, getMoodTrend, getMoodForDate, MOOD_COLORS } from "@/lib/mental";
+import { getWeekMood, getMoodTrend, getMoodForDate } from "@/lib/mental";
+import { MOOD_COLORS } from "@/lib/mood-colors";
 import { getWeekStart, getWeekEnd } from "@/lib/workouts";
 
 function shiftWeek(weekStart: string, delta: number): string {
