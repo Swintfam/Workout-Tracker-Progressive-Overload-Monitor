@@ -4,7 +4,6 @@ import {
   Brain,
   CalendarDays,
   Dumbbell,
-  Film,
   LayoutDashboard,
   Salad,
   Settings,
@@ -20,7 +19,6 @@ const navItems = [
   { label: "Calendar", icon: CalendarDays, href: "/calendar", soon: false },
   { label: "Nutrition", icon: Salad, href: "/nutrition", soon: false },
   { label: "Goals", icon: Target, href: "/goals", soon: false },
-  { label: "Content", icon: Film, href: "/content", soon: true },
   { label: "Mental Health", icon: Brain, href: "/mental-health", soon: false },
 ];
 
