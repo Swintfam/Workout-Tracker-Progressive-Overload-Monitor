@@ -5,13 +5,15 @@ import {
   CalendarDays,
   Dumbbell,
   LayoutDashboard,
+  LogOut,
   Salad,
   Settings,
   Target,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
+import { getSupabaseBrowser } from "@/lib/supabase/browser";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/", soon: false },
@@ -24,6 +26,14 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    const supabase = getSupabaseBrowser();
+    await supabase.auth.signOut();
+    router.push("/auth/sign-in");
+    router.refresh();
+  }
 
   return (
     <aside className="flex h-screen w-64 flex-col justify-between border-r border-border bg-surface px-4 py-6">
@@ -87,6 +97,13 @@ export default function Sidebar() {
           Settings
         </div>
         <ThemeToggle />
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted transition hover:bg-red-500/10 hover:text-red-400"
+        >
+          <LogOut size={18} />
+          Sign Out
+        </button>
       </div>
     </aside>
   );
