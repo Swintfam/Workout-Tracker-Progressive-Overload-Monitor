@@ -1,13 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import type { CookieOptions } from "@supabase/ssr";
 
 /**
  * OAuth callback handler.
- * Supabase redirects here after Google (or any provider) auth completes.
- * Exchanges the `code` query param for a session, sets auth cookies,
- * then sends the user to the dashboard.
+ * Cookies must be set directly on the redirect response —
+ * using cookies() from next/headers loses them on the redirect.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -15,18 +14,22 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get("next") ?? "/";
 
   if (code) {
-    const cookieStore = cookies();
+    // Create the redirect response first so we can attach cookies to it
+    const response = NextResponse.redirect(`${origin}${next}`);
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name: string) { return cookieStore.get(name)?.value; },
-          set(name: string, value: string, options: Record<string, unknown>) {
-            cookieStore.set({ name, value, ...options });
+          get(name: string) {
+            return request.cookies.get(name)?.value;
           },
-          remove(name: string, options: Record<string, unknown>) {
-            cookieStore.delete({ name, ...options });
+          set(name: string, value: string, options: CookieOptions) {
+            response.cookies.set({ name, value, ...options });
+          },
+          remove(name: string, options: CookieOptions) {
+            response.cookies.set({ name, value: "", ...options });
           },
         },
       }
@@ -34,10 +37,9 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      return response;
     }
   }
 
-  // If something went wrong, send back to sign-in with an error flag
   return NextResponse.redirect(`${origin}/auth/sign-in?error=auth_callback_failed`);
 }
