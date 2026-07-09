@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
 
 function CallbackHandler() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -13,26 +12,22 @@ function CallbackHandler() {
     const next = searchParams.get("next") ?? "/";
 
     async function handleCallback() {
-      // First check if session already exists (implicit flow)
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.replace(next);
-        router.refresh();
+        window.location.href = next;
         return;
       }
 
-      // Try PKCE code exchange
       const code = searchParams.get("code");
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (!error) {
-          router.replace(next);
-          router.refresh();
+          window.location.href = next;
           return;
         }
       }
 
-      router.replace("/auth/sign-in?error=callback_failed");
+      window.location.href = "/auth/sign-in?error=callback_failed";
     }
 
     handleCallback();
