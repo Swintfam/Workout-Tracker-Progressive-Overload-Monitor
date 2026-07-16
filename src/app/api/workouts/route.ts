@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
     reps: number;
     weight?: number | null;
     notes?: string | null;
+    is_drop_set?: boolean;
+    set_data?: Array<{ set: number; reps: number; weight: number | null }> | null;
   }) => ({
     user_id: userId,
     session_type,
@@ -48,6 +50,8 @@ export async function POST(request: NextRequest) {
     reps: ex.reps,
     weight: ex.weight ?? null,
     notes: ex.notes ?? null,
+    is_drop_set: ex.is_drop_set ?? false,
+    set_data: ex.set_data ?? null,
   }));
 
   const { data, error } = await admin

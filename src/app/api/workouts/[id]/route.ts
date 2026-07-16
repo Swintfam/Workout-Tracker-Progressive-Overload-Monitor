@@ -18,6 +18,8 @@ export async function PUT(
       reps: body.reps,
       weight: body.weight ?? null,
       notes: body.notes ?? null,
+      is_drop_set: body.is_drop_set ?? false,
+      set_data: body.set_data ?? null,
     })
     .eq("id", params.id)
     .eq("user_id", userId)
