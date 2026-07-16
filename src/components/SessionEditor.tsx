@@ -4,6 +4,11 @@ import { Plus, Save, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+function formatDropSequence(set_data: Array<{ weight: number | null }> | null): string {
+  if (!set_data || set_data.length === 0) return "";
+  return set_data.map((s) => s.weight ?? "bw").join(" → ");
+}
+
 const MUSCLE_GROUPS = ["Abs", "Pull", "Push", "Legs", "Full Body"] as const;
 
 const EXERCISE_SUGGESTIONS: Record<string, string[]> = {
@@ -384,8 +389,21 @@ export default function SessionEditor({ date, initialExercises }: Props) {
               </div>
             </div>
 
-            {/* Per-set rows */}
-            {isMultiSet && (
+            {/* Drop set read-only summary */}
+            {row.is_drop_set && row.set_data && row.set_data.length > 0 && (
+              <div className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-orange-400">
+                  {row.set_data.length} stops · {row.set_data.reduce((a, s) => a + s.reps, 0)} total reps
+                </p>
+                <p className="text-sm text-muted">
+                  {formatDropSequence(row.set_data)}
+                  <span className="ml-1 text-muted/60">lb</span>
+                </p>
+              </div>
+            )}
+
+            {/* Per-set rows (standard multi-set) */}
+            {isMultiSet && !row.is_drop_set && (
               <div className="mt-4 flex flex-col gap-2">
                 <div className="grid grid-cols-[32px_1fr_1fr] gap-2 px-1">
                   <span />
@@ -393,15 +411,8 @@ export default function SessionEditor({ date, initialExercises }: Props) {
                   <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Weight (lb)</span>
                 </div>
                 {row.set_details.map((s, i) => (
-                  <div
-                    key={i}
-                    className={`grid grid-cols-[32px_1fr_1fr] items-center gap-2 rounded-xl px-1 py-1 ${
-                      row.is_drop_set && i > 0 ? "border-l-2 border-orange-500/30 pl-2" : ""
-                    }`}
-                  >
-                    <span className="text-xs font-semibold text-muted">
-                      {row.is_drop_set ? (i === 0 ? "1st" : `↓${i + 1}`) : `S${i + 1}`}
-                    </span>
+                  <div key={i} className="grid grid-cols-[32px_1fr_1fr] items-center gap-2 px-1">
+                    <span className="text-xs font-semibold text-muted">S{i + 1}</span>
                     <input
                       type="number"
                       value={s.reps}
@@ -417,11 +428,7 @@ export default function SessionEditor({ date, initialExercises }: Props) {
                       placeholder="bw"
                       min="0"
                       step="0.5"
-                      className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
-                        row.is_drop_set
-                          ? "border-orange-500/30 bg-orange-500/5 focus:ring-orange-500/30"
-                          : "border-border bg-background focus:ring-accent/50"
-                      }`}
+                      className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
                     />
                   </div>
                 ))}

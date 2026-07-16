@@ -35,11 +35,16 @@ interface ExerciseRow {
   exercise: string;
   muscle_group: string;
   sets: string;
-  reps: string;       // used when sets === 1
-  weight: string;     // used when sets === 1
+  reps: string;
+  weight: string;
   notes: string;
   is_drop_set: boolean;
-  set_details: SetDetail[];  // used when sets > 1
+  set_details: SetDetail[];
+  // Drop set specific fields
+  drop_start: string;
+  drop_per_stop: string;
+  drop_end: string;
+  drop_reps: string;
 }
 
 let nextId = 1;
@@ -55,11 +60,23 @@ function makeExercise(defaultMuscle: string): ExerciseRow {
     notes: "",
     is_drop_set: false,
     set_details: [],
+    drop_start: "",
+    drop_per_stop: "",
+    drop_end: "",
+    drop_reps: "",
   };
 }
 
-function buildSetDetails(count: number, reps: string, weight: string): SetDetail[] {
-  return Array.from({ length: count }, () => ({ reps, weight }));
+/** Generate the weight sequence for a drop set */
+function buildDropSequence(start: number, dropPer: number, end: number): number[] {
+  if (!start || !dropPer || dropPer <= 0) return [];
+  const seq: number[] = [];
+  let w = start;
+  while (w >= end - 0.01) {
+    seq.push(Math.round(w * 10) / 10);
+    w -= dropPer;
+  }
+  return seq;
 }
 
 export default function LogWorkoutPage() {
@@ -102,7 +119,9 @@ export default function LogWorkoutPage() {
     setExercises((prev) =>
       prev.map((e) => {
         if (e.id !== id) return e;
-        const details = count > 1 ? buildSetDetails(count, e.reps, e.weight) : [];
+        const details = count > 1
+          ? Array.from({ length: count }, (_, i) => e.set_details[i] ?? { reps: e.reps, weight: e.weight })
+          : [];
         return { ...e, sets: value, set_details: details };
       })
     );
@@ -124,10 +143,14 @@ export default function LogWorkoutPage() {
     e.preventDefault();
     setError(null);
 
-    const valid = exercises.filter((ex) => ex.exercise.trim() && ex.sets);
+    const valid = exercises.filter((ex) => {
+      if (!ex.exercise.trim()) return false;
+      if (ex.is_drop_set) return ex.drop_start && ex.drop_per_stop && ex.drop_end && ex.drop_reps;
+      return ex.sets;
+    });
 
     if (valid.length === 0) {
-      setError("Add at least one exercise with a name and sets.");
+      setError("Add at least one complete exercise.");
       return;
     }
 
@@ -141,15 +164,36 @@ export default function LogWorkoutPage() {
           date,
           duration_min: duration ? parseInt(duration) : null,
           exercises: valid.map((ex) => {
+            if (ex.is_drop_set) {
+              const start = parseFloat(ex.drop_start);
+              const dropPer = parseFloat(ex.drop_per_stop);
+              const end = parseFloat(ex.drop_end);
+              const repsPerStop = parseInt(ex.drop_reps) || 0;
+              const sequence = buildDropSequence(start, dropPer, end);
+              const set_data = sequence.map((w, i) => ({
+                set: i + 1,
+                reps: repsPerStop,
+                weight: w,
+              }));
+              return {
+                exercise: ex.exercise.trim(),
+                muscle_group: ex.muscle_group,
+                sets: 1,
+                reps: sequence.length * repsPerStop, // total reps
+                weight: start,                        // peak weight
+                notes: ex.notes || null,
+                is_drop_set: true,
+                set_data,
+              };
+            }
+
+            // Standard multi-set or single-set
             const setsCount = parseInt(ex.sets) || 1;
             const isMultiSet = setsCount > 1;
-
-            // Use effective details — same derivation as the render
-            const effectiveDetails: { reps: string; weight: string }[] = isMultiSet
+            const effectiveDetails = isMultiSet
               ? Array.from({ length: setsCount }, (_, i) => ex.set_details[i] ?? { reps: ex.reps, weight: ex.weight })
               : [];
 
-            // Build set_data for multi-set exercises
             const set_data = isMultiSet
               ? effectiveDetails.map((s, i) => ({
                   set: i + 1,
@@ -158,7 +202,6 @@ export default function LogWorkoutPage() {
                 }))
               : null;
 
-            // Summary values (for backward compat + volume calcs)
             const summaryReps = isMultiSet
               ? Math.round(effectiveDetails.reduce((a, s) => a + (parseInt(s.reps) || 0), 0) / setsCount)
               : parseInt(ex.reps) || 0;
@@ -173,7 +216,7 @@ export default function LogWorkoutPage() {
               reps: summaryReps,
               weight: summaryWeight,
               notes: ex.notes || null,
-              is_drop_set: ex.is_drop_set,
+              is_drop_set: false,
               set_data,
             };
           }),
@@ -265,14 +308,27 @@ export default function LogWorkoutPage() {
 
             {exercises.map((ex, idx) => {
               const suggestions = EXERCISE_SUGGESTIONS[ex.muscle_group] ?? [];
+
+              // Drop set preview
+              const dropStart = parseFloat(ex.drop_start);
+              const dropPer = parseFloat(ex.drop_per_stop);
+              const dropEnd = parseFloat(ex.drop_end);
+              const dropReps = parseInt(ex.drop_reps) || 0;
+              const dropSequence = ex.is_drop_set && dropStart && dropPer && dropEnd
+                ? buildDropSequence(dropStart, dropPer, dropEnd)
+                : [];
+              const dropTotalReps = dropSequence.length * dropReps;
+
+              // Standard multi-set
               const setsCount = parseInt(ex.sets) || 0;
-              const isMultiSet = setsCount > 1;
-              // Derive effective per-set details from the sets count, filling from stored
-              // details where available, falling back to the summary reps/weight
+              const isMultiSet = !ex.is_drop_set && setsCount > 1;
               const effectiveDetails: SetDetail[] = isMultiSet
                 ? Array.from({ length: setsCount }, (_, i) => ex.set_details[i] ?? { reps: ex.reps, weight: ex.weight })
                 : [];
-              const isWeighted = isMultiSet
+
+              const isWeighted = ex.is_drop_set
+                ? !!ex.drop_start
+                : isMultiSet
                 ? effectiveDetails.some((s) => s.weight.trim() !== "")
                 : ex.weight.trim() !== "";
 
@@ -303,11 +359,9 @@ export default function LogWorkoutPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      {/* Drop set toggle */}
                       <button
                         type="button"
                         onClick={() => updateField(ex.id, "is_drop_set", !ex.is_drop_set)}
-                        title={ex.is_drop_set ? "Remove drop set" : "Mark as drop set"}
                         className={`rounded-lg px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition ${
                           ex.is_drop_set
                             ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
@@ -337,7 +391,7 @@ export default function LogWorkoutPage() {
                         list={`sugg-${ex.id}`}
                         value={ex.exercise}
                         onChange={(e) => updateField(ex.id, "exercise", e.target.value)}
-                        placeholder="e.g. Bench Press"
+                        placeholder="e.g. Adductor Machine"
                         className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
                       />
                       <datalist id={`sugg-${ex.id}`}>
@@ -346,7 +400,7 @@ export default function LogWorkoutPage() {
                     </div>
 
                     {/* Muscle group */}
-                    <div>
+                    <div className={ex.is_drop_set ? "" : ""}>
                       <label className="mb-1 block text-xs font-medium text-muted">Muscle Group</label>
                       <select
                         value={ex.muscle_group}
@@ -357,54 +411,8 @@ export default function LogWorkoutPage() {
                       </select>
                     </div>
 
-                    {/* Sets */}
+                    {/* Notes — always shown */}
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-muted">Sets</label>
-                      <input
-                        type="number"
-                        value={ex.sets}
-                        onChange={(e) => handleSetsChange(ex.id, e.target.value)}
-                        placeholder="e.g. 3"
-                        min="1"
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-                      />
-                    </div>
-
-                    {/* Single-set mode: show reps + weight inline */}
-                    {!isMultiSet && (
-                      <>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-muted">
-                            Reps <span className="text-muted/60">(or secs)</span>
-                          </label>
-                          <input
-                            type="number"
-                            value={ex.reps}
-                            onChange={(e) => updateField(ex.id, "reps", e.target.value)}
-                            placeholder="10"
-                            min="1"
-                            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-muted">
-                            Weight (lb) <span className="text-muted/60">optional</span>
-                          </label>
-                          <input
-                            type="number"
-                            value={ex.weight}
-                            onChange={(e) => updateField(ex.id, "weight", e.target.value)}
-                            placeholder="bodyweight"
-                            min="0"
-                            step="0.5"
-                            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {/* Notes */}
-                    <div className={isMultiSet ? "col-span-2" : "col-span-2"}>
                       <label className="mb-1 block text-xs font-medium text-muted">
                         Notes <span className="text-muted/60">optional</span>
                       </label>
@@ -418,7 +426,132 @@ export default function LogWorkoutPage() {
                     </div>
                   </div>
 
-                  {/* Per-set rows (multi-set mode) */}
+                  {/* ── DROP SET MODE ── */}
+                  {ex.is_drop_set && (
+                    <div className="mt-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-muted">Start Weight (lb)</label>
+                          <input
+                            type="number"
+                            value={ex.drop_start}
+                            onChange={(e) => updateField(ex.id, "drop_start", e.target.value)}
+                            placeholder="330"
+                            min="0"
+                            step="5"
+                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-muted">Drop Per Stop (lb)</label>
+                          <input
+                            type="number"
+                            value={ex.drop_per_stop}
+                            onChange={(e) => updateField(ex.id, "drop_per_stop", e.target.value)}
+                            placeholder="30"
+                            min="1"
+                            step="5"
+                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-muted">End Weight (lb)</label>
+                          <input
+                            type="number"
+                            value={ex.drop_end}
+                            onChange={(e) => updateField(ex.id, "drop_end", e.target.value)}
+                            placeholder="50"
+                            min="0"
+                            step="5"
+                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-muted">Reps Per Stop</label>
+                          <input
+                            type="number"
+                            value={ex.drop_reps}
+                            onChange={(e) => updateField(ex.id, "drop_reps", e.target.value)}
+                            placeholder="10"
+                            min="1"
+                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Live sequence preview */}
+                      {dropSequence.length > 0 && (
+                        <div className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-3">
+                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-orange-400">
+                            Sequence preview · {dropSequence.length} stops · {dropTotalReps} total reps
+                          </p>
+                          <p className="text-sm text-muted">
+                            {dropSequence.map((w, i) => (
+                              <span key={i}>
+                                <span className="text-foreground font-medium">{w}</span>
+                                {i < dropSequence.length - 1 && (
+                                  <span className="text-orange-400"> → </span>
+                                )}
+                              </span>
+                            ))}
+                            <span className="ml-1 text-muted/60">lb</span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── STANDARD MODE ── */}
+                  {!ex.is_drop_set && (
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-muted">Sets</label>
+                        <input
+                          type="number"
+                          value={ex.sets}
+                          onChange={(e) => handleSetsChange(ex.id, e.target.value)}
+                          placeholder="e.g. 3"
+                          min="1"
+                          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                        />
+                      </div>
+
+                      {/* Single-set reps + weight */}
+                      {!isMultiSet && (
+                        <>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-muted">
+                              Reps <span className="text-muted/60">(or secs)</span>
+                            </label>
+                            <input
+                              type="number"
+                              value={ex.reps}
+                              onChange={(e) => updateField(ex.id, "reps", e.target.value)}
+                              placeholder="10"
+                              min="1"
+                              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-muted">
+                              Weight (lb) <span className="text-muted/60">optional</span>
+                            </label>
+                            <input
+                              type="number"
+                              value={ex.weight}
+                              onChange={(e) => updateField(ex.id, "weight", e.target.value)}
+                              placeholder="bodyweight"
+                              min="0"
+                              step="0.5"
+                              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Per-set rows (multi-set standard mode) */}
                   {isMultiSet && (
                     <div className="mt-4 flex flex-col gap-2">
                       <div className="grid grid-cols-[32px_1fr_1fr] gap-2 px-1">
@@ -427,12 +560,8 @@ export default function LogWorkoutPage() {
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Weight (lb)</span>
                       </div>
                       {effectiveDetails.map((s, i) => (
-                        <div key={i} className={`grid grid-cols-[32px_1fr_1fr] items-center gap-2 rounded-xl px-1 py-1 ${
-                          ex.is_drop_set && i > 0 ? "border-l-2 border-orange-500/30 pl-2" : ""
-                        }`}>
-                          <span className="text-xs font-semibold text-muted">
-                            {ex.is_drop_set ? (i === 0 ? "1st" : `↓${i + 1}`) : `S${i + 1}`}
-                          </span>
+                        <div key={i} className="grid grid-cols-[32px_1fr_1fr] items-center gap-2 px-1">
+                          <span className="text-xs font-semibold text-muted">S{i + 1}</span>
                           <input
                             type="number"
                             value={s.reps}
@@ -448,11 +577,7 @@ export default function LogWorkoutPage() {
                             placeholder="bw"
                             min="0"
                             step="0.5"
-                            className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
-                              ex.is_drop_set
-                                ? "border-orange-500/30 bg-orange-500/5 focus:ring-orange-500/30"
-                                : "border-border bg-background focus:ring-accent/50"
-                            }`}
+                            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
                           />
                         </div>
                       ))}
