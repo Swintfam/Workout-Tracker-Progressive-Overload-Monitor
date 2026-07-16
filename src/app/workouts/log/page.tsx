@@ -142,11 +142,16 @@ export default function LogWorkoutPage() {
           duration_min: duration ? parseInt(duration) : null,
           exercises: valid.map((ex) => {
             const setsCount = parseInt(ex.sets) || 1;
-            const isMultiSet = ex.set_details.length > 0;
+            const isMultiSet = setsCount > 1;
+
+            // Use effective details — same derivation as the render
+            const effectiveDetails: { reps: string; weight: string }[] = isMultiSet
+              ? Array.from({ length: setsCount }, (_, i) => ex.set_details[i] ?? { reps: ex.reps, weight: ex.weight })
+              : [];
 
             // Build set_data for multi-set exercises
             const set_data = isMultiSet
-              ? ex.set_details.map((s, i) => ({
+              ? effectiveDetails.map((s, i) => ({
                   set: i + 1,
                   reps: parseInt(s.reps) || 0,
                   weight: s.weight ? parseFloat(s.weight) : null,
@@ -155,10 +160,10 @@ export default function LogWorkoutPage() {
 
             // Summary values (for backward compat + volume calcs)
             const summaryReps = isMultiSet
-              ? Math.round(ex.set_details.reduce((a, s) => a + (parseInt(s.reps) || 0), 0) / setsCount)
+              ? Math.round(effectiveDetails.reduce((a, s) => a + (parseInt(s.reps) || 0), 0) / setsCount)
               : parseInt(ex.reps) || 0;
             const summaryWeight = isMultiSet
-              ? Math.max(...ex.set_details.map((s) => parseFloat(s.weight) || 0)) || null
+              ? Math.max(...effectiveDetails.map((s) => parseFloat(s.weight) || 0)) || null
               : ex.weight ? parseFloat(ex.weight) : null;
 
             return {
@@ -259,12 +264,17 @@ export default function LogWorkoutPage() {
             </div>
 
             {exercises.map((ex, idx) => {
-              const isMultiSet = ex.set_details.length > 0;
-              const isWeighted = isMultiSet
-                ? ex.set_details.some((s) => s.weight.trim() !== "")
-                : ex.weight.trim() !== "";
-
               const suggestions = EXERCISE_SUGGESTIONS[ex.muscle_group] ?? [];
+              const setsCount = parseInt(ex.sets) || 0;
+              const isMultiSet = setsCount > 1;
+              // Derive effective per-set details from the sets count, filling from stored
+              // details where available, falling back to the summary reps/weight
+              const effectiveDetails: SetDetail[] = isMultiSet
+                ? Array.from({ length: setsCount }, (_, i) => ex.set_details[i] ?? { reps: ex.reps, weight: ex.weight })
+                : [];
+              const isWeighted = isMultiSet
+                ? effectiveDetails.some((s) => s.weight.trim() !== "")
+                : ex.weight.trim() !== "";
 
               return (
                 <div
@@ -354,7 +364,7 @@ export default function LogWorkoutPage() {
                         type="number"
                         value={ex.sets}
                         onChange={(e) => handleSetsChange(ex.id, e.target.value)}
-                        placeholder="3"
+                        placeholder="e.g. 3"
                         min="1"
                         className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
                       />
@@ -412,11 +422,11 @@ export default function LogWorkoutPage() {
                   {isMultiSet && (
                     <div className="mt-4 flex flex-col gap-2">
                       <div className="grid grid-cols-[32px_1fr_1fr] gap-2 px-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted"></span>
+                        <span />
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Reps</span>
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Weight (lb)</span>
                       </div>
-                      {ex.set_details.map((s, i) => (
+                      {effectiveDetails.map((s, i) => (
                         <div key={i} className={`grid grid-cols-[32px_1fr_1fr] items-center gap-2 rounded-xl px-1 py-1 ${
                           ex.is_drop_set && i > 0 ? "border-l-2 border-orange-500/30 pl-2" : ""
                         }`}>
