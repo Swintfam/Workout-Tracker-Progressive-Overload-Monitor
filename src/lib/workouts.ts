@@ -217,3 +217,17 @@ export async function getLastSession() {
 
   return data ?? [];
 }
+export async function getNextPlannedSession() {
+  const admin = getDbClient();
+  const userId = await getEffectiveUserId();
+  const { data } = await admin
+    .from("planned_sessions")
+    .select(
+      "target_date, session_type, muscle_group, exercise, target_sets, target_reps, target_weight, target_rpe, rationale"
+    )
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  return data?.[0] ?? null;
+}
