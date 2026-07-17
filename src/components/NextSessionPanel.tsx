@@ -1,4 +1,4 @@
-import { ArrowRight, Dumbbell } from "lucide-react";
+import { ArrowRight, Dumbbell, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 interface SessionRow {
@@ -11,17 +11,55 @@ interface SessionRow {
   weight: number | null;
 }
 
-interface Props {
-  lastSession: SessionRow[];
+interface PlannedSession {
+  target_date: string;
+  session_type: string;
+  muscle_group: string | null;
+  exercise: string;
+  target_sets: number | null;
+  target_reps: number | null;
+  target_weight: number | null;
+  target_rpe: number | null;
+  rationale: string | null;
 }
 
-export default function NextSessionPanel({ lastSession }: Props) {
+interface Props {
+  lastSession: SessionRow[];
+  nextSession: PlannedSession | null;
+}
+
+export default function NextSessionPanel({ lastSession, nextSession }: Props) {
   const hasData = lastSession.length > 0;
   const lastDate = hasData ? lastSession[0].date : null;
   const lastType = hasData ? lastSession[0].session_type : null;
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5">
+      {nextSession && (
+        <div className="rounded-xl border border-accent/40 bg-accent/10 p-3">
+          <div className="mb-1 flex items-center gap-2">
+            <Sparkles size={14} className="text-accent" />
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-accent">
+              Next Up · {nextSession.session_type}
+            </h4>
+          </div>
+          <p className="text-sm font-medium">{nextSession.exercise}</p>
+          <p className="text-xs text-muted">
+            {[
+              nextSession.target_sets && `${nextSession.target_sets} sets`,
+              nextSession.target_reps && `${nextSession.target_reps} reps`,
+              nextSession.target_weight && `@ ${nextSession.target_weight} lb`,
+              nextSession.target_rpe && `RPE ${nextSession.target_rpe}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          {nextSession.rationale && (
+            <p className="mt-1 text-xs italic text-muted">{nextSession.rationale}</p>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Last Session</h3>
         {!hasData && (
@@ -30,7 +68,6 @@ export default function NextSessionPanel({ lastSession }: Props) {
           </span>
         )}
       </div>
-
       {hasData ? (
         <>
           <div className="flex items-center gap-3">
@@ -50,7 +87,6 @@ export default function NextSessionPanel({ lastSession }: Props) {
               </p>
             </div>
           </div>
-
           <div className="rounded-xl border border-border bg-background/40 p-3 text-sm text-muted">
             {lastSession.slice(0, 3).map((s, i) => (
               <div key={i} className={i > 0 ? "mt-1" : ""}>
@@ -74,7 +110,6 @@ export default function NextSessionPanel({ lastSession }: Props) {
           <p>No sessions logged yet</p>
         </div>
       )}
-
       <Link
         href="/workouts/log"
         className="flex items-center justify-center gap-2 rounded-xl bg-accent py-2 text-sm font-medium text-background transition hover:bg-accent-dark"
