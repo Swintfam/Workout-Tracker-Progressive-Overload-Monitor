@@ -131,7 +131,12 @@ export default function LogWorkoutPage() {
     setExercises((prev) =>
       prev.map((e) => {
         if (e.id !== exId) return e;
-        const updated = e.set_details.map((s, i) =>
+        const count = parseInt(e.sets) || 0;
+        // Always ensure set_details is fully initialized before updating a cell
+        const base = Array.from({ length: count }, (_, i) =>
+          e.set_details[i] ?? { reps: e.reps, weight: e.weight }
+        );
+        const updated = base.map((s, i) =>
           i === setIdx ? { ...s, [field]: value } : s
         );
         return { ...e, set_details: updated };
@@ -361,7 +366,17 @@ export default function LogWorkoutPage() {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => updateField(ex.id, "is_drop_set", !ex.is_drop_set)}
+                        onClick={() => {
+                          const enabling = !ex.is_drop_set;
+                          setExercises((prev) => prev.map((e) =>
+                            e.id !== ex.id ? e : {
+                              ...e,
+                              is_drop_set: enabling,
+                              sets: enabling ? "1" : e.sets,
+                              set_details: enabling ? [] : e.set_details,
+                            }
+                          ));
+                        }}
                         className={`rounded-lg px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition ${
                           ex.is_drop_set
                             ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
