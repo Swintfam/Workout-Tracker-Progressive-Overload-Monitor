@@ -123,3 +123,4 @@ export default async function DashboardPage() {
     </div>
   );
 }
+import { getWeekMood } from "@/lib/mental";
