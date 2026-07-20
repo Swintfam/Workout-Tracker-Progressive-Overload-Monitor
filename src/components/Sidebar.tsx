@@ -6,6 +6,7 @@ import {
   Dumbbell,
   LayoutDashboard,
   LogOut,
+  Plus,
   Salad,
   Settings,
   Target,
@@ -24,6 +25,13 @@ const navItems = [
   { label: "Mental Health", icon: Brain, href: "/mental-health", soon: false },
 ];
 
+const bottomTabs = [
+  { label: "Home", icon: LayoutDashboard, href: "/" },
+  { label: "Workouts", icon: Dumbbell, href: "/workouts" },
+  { label: "Nutrition", icon: Salad, href: "/nutrition" },
+  { label: "Mind", icon: Brain, href: "/mental-health" },
+];
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -35,8 +43,40 @@ export default function Sidebar() {
     router.refresh();
   }
 
+  function isActive(href: string) {
+    return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
+  }
+
   return (
-    <aside className="flex h-screen w-64 flex-col justify-between border-r border-border bg-surface px-4 py-6">
+    <>
+    {/* ── MOBILE BOTTOM NAV ── */}
+    <nav className="fixed bottom-0 inset-x-0 z-50 flex lg:hidden items-center justify-around border-t border-border bg-surface px-2 pb-safe">
+      {bottomTabs.slice(0, 2).map(({ label, icon: Icon, href }) => (
+        <Link key={href} href={href}
+          className={`flex flex-col items-center gap-0.5 px-3 py-3 text-[10px] transition ${isActive(href) ? "text-accent" : "text-muted"}`}>
+          <Icon size={22} />
+          {label}
+        </Link>
+      ))}
+      {/* Center Log button */}
+      <Link href="/workouts/log"
+        className="flex flex-col items-center gap-0.5 px-3 py-2 text-[10px] text-muted transition">
+        <span className={`flex h-12 w-12 items-center justify-center rounded-full transition ${pathname === "/workouts/log" ? "bg-accent" : "bg-accent"}`}>
+          <Plus size={24} className="text-background" />
+        </span>
+        <span className="mt-0.5">Log</span>
+      </Link>
+      {bottomTabs.slice(2).map(({ label, icon: Icon, href }) => (
+        <Link key={href} href={href}
+          className={`flex flex-col items-center gap-0.5 px-3 py-3 text-[10px] transition ${isActive(href) ? "text-accent" : "text-muted"}`}>
+          <Icon size={22} />
+          {label}
+        </Link>
+      ))}
+    </nav>
+
+    {/* ── DESKTOP SIDEBAR ── */}
+    <aside className="hidden lg:flex h-screen w-64 flex-col justify-between border-r border-border bg-surface px-4 py-6">
       <div>
         <div className="mb-8 flex items-center gap-2 px-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent font-bold text-background">
@@ -106,5 +146,6 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

@@ -65,7 +65,7 @@ export default async function CalendarPage({
     <div className="flex min-h-screen bg-background">
       <Sidebar />
 
-      <main className="flex-1 px-8 py-6">
+      <main className="flex-1 px-4 lg:px-8 py-4 lg:py-6 pb-24 lg:pb-6">
         <header className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Calendar</h1>

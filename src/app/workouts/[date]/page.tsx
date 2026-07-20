@@ -22,7 +22,7 @@ export default async function SessionDetailPage({
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 px-8 py-6">
+      <main className="flex-1 px-4 lg:px-8 py-4 lg:py-6 pb-24 lg:pb-6">
         <div className="mx-auto max-w-2xl">
           <div className="mb-6 flex items-center gap-3">
             <Link

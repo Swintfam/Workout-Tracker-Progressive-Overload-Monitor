@@ -38,7 +38,7 @@ export default async function NutritionPage({
     <div className="flex min-h-screen bg-background">
       <Sidebar />
 
-      <main className="flex-1 px-8 py-6">
+      <main className="flex-1 px-4 lg:px-8 py-4 lg:py-6 pb-24 lg:pb-6">
         {/* Header */}
         <header className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Nutrition</h1>
