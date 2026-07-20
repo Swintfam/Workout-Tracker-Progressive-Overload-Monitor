@@ -32,23 +32,19 @@ export async function getWeeklyRepTotals(
   const userId = await getEffectiveUserId();
   const from = weekStart ?? getWeekStart();
   const to = getWeekEnd(from);
-
   const { data } = await admin
     .from("workout_sessions")
     .select("muscle_group, sets, reps")
     .eq("user_id", userId)
     .gte("date", from)
     .lte("date", to);
-
   const totals: Record<MuscleGroup, number> = { Abs: 0, Pull: 0, Push: 0, Legs: 0 };
-
   for (const row of data ?? []) {
     const mg = row.muscle_group as MuscleGroup;
     if (mg in totals) {
       totals[mg] += (row.sets ?? 0) * (row.reps ?? 0);
     }
   }
-
   return totals;
 }
 
@@ -57,14 +53,12 @@ export async function getWeeklySessionCount(weekStart?: string): Promise<number>
   const userId = await getEffectiveUserId();
   const from = weekStart ?? getWeekStart();
   const to = getWeekEnd(from);
-
   const { data } = await admin
     .from("workout_sessions")
     .select("date")
     .eq("user_id", userId)
     .gte("date", from)
     .lte("date", to);
-
   if (!data) return 0;
   return new Set(data.map((r) => r.date)).size;
 }
@@ -76,24 +70,20 @@ export async function getWeeklyVolumeByDay(
   const userId = await getEffectiveUserId();
   const from = weekStart ?? getWeekStart();
   const to = getWeekEnd(from);
-
   const { data } = await admin
     .from("workout_sessions")
     .select("date, sets, reps, weight")
     .eq("user_id", userId)
     .gte("date", from)
     .lte("date", to);
-
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const byDay: Record<string, number> = {};
-
   for (const row of data ?? []) {
     const d = new Date(row.date + "T00:00:00");
     const idx = (d.getDay() + 6) % 7; // 0=Mon
     const label = days[idx];
     byDay[label] = (byDay[label] ?? 0) + (row.sets ?? 0) * (row.reps ?? 0) * (row.weight ?? 1);
   }
-
   return days.map((day) => ({ day, volume: byDay[day] ?? 0 }));
 }
 
@@ -103,7 +93,6 @@ export async function getSessionsForWeek(weekStart?: string) {
   const userId = await getEffectiveUserId();
   const from = weekStart ?? getWeekStart();
   const to = getWeekEnd(from);
-
   const { data } = await admin
     .from("workout_sessions")
     .select("*")
@@ -112,7 +101,6 @@ export async function getSessionsForWeek(weekStart?: string) {
     .lte("date", to)
     .order("date", { ascending: false })
     .order("created_at", { ascending: false });
-
   return data ?? [];
 }
 
@@ -125,25 +113,21 @@ export async function getVolumeTrend(
 ): Promise<{ weekStart: string; weekLabel: string; volume: number }[]> {
   const admin = getDbClient();
   const userId = await getEffectiveUserId();
-
   const currentWeekStart = getWeekStart();
   const earliestStart = new Date(currentWeekStart + "T00:00:00");
   earliestStart.setDate(earliestStart.getDate() - 7 * (weeksBack - 1));
   const earliestStartStr = earliestStart.toISOString().split("T")[0];
-
   const { data } = await admin
     .from("workout_sessions")
     .select("date, sets, reps, weight")
     .eq("user_id", userId)
     .gte("date", earliestStartStr);
-
   const byWeek: Record<string, number> = {};
   for (const row of data ?? []) {
     const ws = getWeekStart(new Date(row.date + "T00:00:00"));
     byWeek[ws] =
       (byWeek[ws] ?? 0) + (row.sets ?? 0) * (row.reps ?? 0) * (row.weight ?? 1);
   }
-
   const weeks: { weekStart: string; weekLabel: string; volume: number }[] = [];
   for (let i = weeksBack - 1; i >= 0; i--) {
     const d = new Date(currentWeekStart + "T00:00:00");
@@ -152,7 +136,6 @@ export async function getVolumeTrend(
     const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     weeks.push({ weekStart: ws, weekLabel: label, volume: byWeek[ws] ?? 0 });
   }
-
   return weeks;
 }
 
@@ -163,21 +146,18 @@ export async function getSessionDatesInRange(
 ): Promise<string[]> {
   const admin = getDbClient();
   const userId = await getEffectiveUserId();
-
   const { data } = await admin
     .from("workout_sessions")
     .select("date")
     .eq("user_id", userId)
     .gte("date", from)
     .lte("date", to);
-
   return Array.from(new Set((data ?? []).map((r: { date: string }) => r.date)));
 }
 
 export async function getRecentSessions(limit = 30) {
   const admin = getDbClient();
   const userId = await getEffectiveUserId();
-
   const { data } = await admin
     .from("workout_sessions")
     .select("*")
@@ -185,28 +165,24 @@ export async function getRecentSessions(limit = 30) {
     .order("date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit);
-
   return data ?? [];
 }
 
 export async function getSessionByDate(date: string) {
   const admin = getDbClient();
   const userId = await getEffectiveUserId();
-
   const { data } = await admin
     .from("workout_sessions")
     .select("*")
     .eq("user_id", userId)
     .eq("date", date)
     .order("created_at", { ascending: true });
-
   return data ?? [];
 }
 
 export async function getLastSession() {
   const admin = getDbClient();
   const userId = await getEffectiveUserId();
-
   const { data } = await admin
     .from("workout_sessions")
     .select("date, session_type, exercise, muscle_group, sets, reps, weight")
@@ -214,17 +190,15 @@ export async function getLastSession() {
     .order("date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(5);
-
   return data ?? [];
 }
+
 export async function getNextPlannedSession() {
   const admin = getDbClient();
   const userId = await getEffectiveUserId();
   const { data } = await admin
     .from("planned_sessions")
-    .select(
-      "target_date, session_type, muscle_group, exercise, target_sets, target_reps, target_weight, target_rpe, rationale"
-    )
+    .select("target_date, session_type, muscle_group, exercises, rationale")
     .eq("user_id", userId)
     .eq("status", "pending")
     .order("created_at", { ascending: false })
