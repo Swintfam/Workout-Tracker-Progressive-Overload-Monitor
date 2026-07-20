@@ -21,7 +21,6 @@ export default async function DashboardPage() {
     month: "long",
     day: "numeric",
   });
-
   const todayStr = new Date().toISOString().split("T")[0];
 
   const [repTotals, sessionCount, volumeByDay, lastSession, weekMood, nextSession] = await Promise.all([
@@ -80,34 +79,29 @@ export default async function DashboardPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-
-      <main className="flex-1 px-4 lg:px-8 py-4 lg:py-6 pb-24 lg:pb-6">
+      <main className="flex-1 px-8 py-6">
         <header className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Welcome back, Naeem</h1>
             <p className="text-sm text-muted">{today}</p>
           </div>
         </header>
-
         <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
             <StatCard key={stat.label} {...stat} />
           ))}
         </section>
-
         <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <WeeklyVolumeChart data={volumeByDay} />
           </div>
           <NextSessionPanel lastSession={lastSession} nextSession={nextSession} />
         </section>
-
         <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <ProgressBars goals={repGoals} />
           </div>
         </section>
-
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
