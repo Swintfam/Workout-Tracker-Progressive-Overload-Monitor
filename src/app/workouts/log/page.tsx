@@ -293,25 +293,25 @@ export default function LogWorkoutPage() {
                     <div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-muted">Start Weight (lb)</label>
+                          <label className="mb-1 block text-xs font-medium text-orange-400">Start Weight (lb)</label>
                           <input type="number" value={ex.drop_start} onChange={e => updateEx(ex.id, { drop_start: e.target.value })}
                             placeholder="330" min="0" step="5"
                             className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-muted">Drop Per Stop (lb)</label>
+                          <label className="mb-1 block text-xs font-medium text-orange-400">Drop Per Stop (lb)</label>
                           <input type="number" value={ex.drop_per_stop} onChange={e => updateEx(ex.id, { drop_per_stop: e.target.value })}
                             placeholder="30" min="1" step="5"
                             className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-muted">End Weight (lb)</label>
+                          <label className="mb-1 block text-xs font-medium text-orange-400">End Weight (lb)</label>
                           <input type="number" value={ex.drop_end} onChange={e => updateEx(ex.id, { drop_end: e.target.value })}
                             placeholder="50" min="0" step="5"
                             className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-muted">Reps Per Stop</label>
+                          <label className="mb-1 block text-xs font-medium text-orange-400">Reps Per Stop</label>
                           <input type="number" value={ex.drop_reps} onChange={e => updateEx(ex.id, { drop_reps: e.target.value })}
                             placeholder="10" min="1"
                             className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
