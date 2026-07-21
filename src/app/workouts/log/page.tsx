@@ -288,81 +288,33 @@ export default function LogWorkoutPage() {
                     </div>
                   </div>
 
-                  {/* ── STANDARD MODE ── */}
-                  {ex.mode === "standard" && (
-                    <>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-muted">Sets</label>
-                          <input type="number" value={ex.sets} onChange={e => handleSets(ex.id, e.target.value)}
-                            placeholder="3" min="1"
-                            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-muted">Reps <span className="text-muted/60">(or secs)</span></label>
-                          <input type="number" value={ex.reps} onChange={e => updateEx(ex.id, { reps: e.target.value })}
-                            placeholder="10" min="1"
-                            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
-                        </div>
-                        {/* Single-set weight — only shown when sets = 1 */}
-                        {!isMultiSet && (
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-muted">Weight (lb) <span className="text-muted/60">opt</span></label>
-                            <input type="number" value={ex.set_weights[0]?.weight ?? ""} min="0" step="0.5"
-                              onChange={e => handleSetWeight(ex.id, 0, e.target.value)}
-                              placeholder="bw"
-                              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Per-set weights when sets > 1 */}
-                      {isMultiSet && (
-                        <div className="mt-3 flex flex-col gap-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Weight per set (lb)</p>
-                          <div className="grid grid-cols-3 gap-2">
-                            {ex.set_weights.map((sw, i) => (
-                              <div key={i}>
-                                <label className="mb-1 block text-[10px] text-muted">Set {i + 1}</label>
-                                <input type="number" value={sw.weight}
-                                  onChange={e => handleSetWeight(ex.id, i, e.target.value)}
-                                  placeholder="bw" min="0" step="0.5"
-                                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {/* ── DROP SET MODE ── */}
-                  {ex.mode === "drop" && (
+                  {/* ── MODE SWITCHER (ternary guarantees exactly one branch renders) ── */}
+                  {ex.mode === "drop" ? (
                     <div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="mb-1 block text-xs font-medium text-muted">Start Weight (lb)</label>
                           <input type="number" value={ex.drop_start} onChange={e => updateEx(ex.id, { drop_start: e.target.value })}
                             placeholder="330" min="0" step="5"
-                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30" />
+                            className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-muted">Drop Per Stop (lb)</label>
                           <input type="number" value={ex.drop_per_stop} onChange={e => updateEx(ex.id, { drop_per_stop: e.target.value })}
                             placeholder="30" min="1" step="5"
-                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30" />
+                            className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-muted">End Weight (lb)</label>
                           <input type="number" value={ex.drop_end} onChange={e => updateEx(ex.id, { drop_end: e.target.value })}
                             placeholder="50" min="0" step="5"
-                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30" />
+                            className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-muted">Reps Per Stop</label>
                           <input type="number" value={ex.drop_reps} onChange={e => updateEx(ex.id, { drop_reps: e.target.value })}
                             placeholder="10" min="1"
-                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30" />
+                            className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                       </div>
 
@@ -380,6 +332,49 @@ export default function LogWorkoutPage() {
                             ))}
                             <span className="ml-1 text-muted/60">lb</span>
                           </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* ── STANDARD MODE ── */
+                    <div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-muted">Sets</label>
+                          <input type="number" value={ex.sets} onChange={e => handleSets(ex.id, e.target.value)}
+                            placeholder="3" min="1"
+                            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-muted">Reps</label>
+                          <input type="number" value={ex.reps} onChange={e => updateEx(ex.id, { reps: e.target.value })}
+                            placeholder="10" min="1"
+                            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
+                        </div>
+                        {!isMultiSet && (
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-muted">Weight (lb)</label>
+                            <input type="number" value={ex.set_weights[0]?.weight ?? ""} min="0" step="0.5"
+                              onChange={e => handleSetWeight(ex.id, 0, e.target.value)}
+                              placeholder="bw"
+                              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
+                          </div>
+                        )}
+                      </div>
+                      {isMultiSet && (
+                        <div className="mt-3">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted">Weight per set (lb)</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {ex.set_weights.map((sw, i) => (
+                              <div key={i}>
+                                <label className="mb-1 block text-[10px] text-muted">Set {i + 1}</label>
+                                <input type="number" value={sw.weight}
+                                  onChange={e => handleSetWeight(ex.id, i, e.target.value)}
+                                  placeholder="bw" min="0" step="0.5"
+                                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
