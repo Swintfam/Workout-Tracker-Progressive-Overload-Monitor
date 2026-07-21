@@ -103,7 +103,8 @@ export default function LogWorkoutPage() {
 
   function setMode(id: number, mode: ExMode) {
     setExercises(prev => prev.map(e =>
-      e.id !== id ? e : { ...e, mode, sets: "", set_weights: [], reps: "" }
+      // keep sets when going to drop (tracks rounds); clear set_weights + reps (standard-only)
+      e.id !== id ? e : { ...e, mode, set_weights: [], reps: "" }
     ));
   }
 
@@ -127,10 +128,11 @@ export default function LogWorkoutPage() {
           const end = parseFloat(ex.drop_end);
           const repsPerStop = parseInt(ex.drop_reps) || 0;
           const seq = buildDropSeq(start, dropPer, end);
+          const setsCount = parseInt(ex.sets) || 1;
           return {
             exercise: ex.exercise.trim(),
             muscle_group: ex.muscle_group,
-            sets: 1,
+            sets: setsCount,
             reps: seq.length * repsPerStop,
             weight: start,
             notes: ex.notes || null,
@@ -230,6 +232,7 @@ export default function LogWorkoutPage() {
               const ds = ex.mode === "drop" && ex.drop_start && ex.drop_per_stop && ex.drop_end
                 ? buildDropSeq(parseFloat(ex.drop_start), parseFloat(ex.drop_per_stop), parseFloat(ex.drop_end))
                 : [];
+              const dropSetsCount = parseInt(ex.sets) || 1;
               const dsTotalReps = ds.length * (parseInt(ex.drop_reps) || 0);
 
               return (
@@ -292,6 +295,12 @@ export default function LogWorkoutPage() {
                   {ex.mode === "drop" ? (
                     <div>
                       <div className="grid grid-cols-2 gap-3">
+                        <div className="col-span-2">
+                          <label className="mb-1 block text-xs font-medium text-muted">Sets <span className="text-muted/60">(rounds of this sequence)</span></label>
+                          <input type="number" value={ex.sets} onChange={e => handleSets(ex.id, e.target.value)}
+                            placeholder="1" min="1"
+                            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
+                        </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-orange-400">Start Weight (lb)</label>
                           <input type="number" value={ex.drop_start} onChange={e => updateEx(ex.id, { drop_start: e.target.value })}
@@ -321,7 +330,7 @@ export default function LogWorkoutPage() {
                       {ds.length > 0 && (
                         <div className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-3">
                           <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-orange-400">
-                            {ds.length} stops · {dsTotalReps} total reps
+                            {dropSetsCount > 1 ? `${dropSetsCount} sets · ` : ""}{ds.length} stops · {dsTotalReps * dropSetsCount} total reps
                           </p>
                           <p className="text-sm text-muted">
                             {ds.map((w, i) => (

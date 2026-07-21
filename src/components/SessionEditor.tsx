@@ -135,8 +135,8 @@ export default function SessionEditor({ date, initialExercises }: Props) {
       prev.map((r) => {
         if (r.id !== id) return r;
         if (!r.is_drop_set) {
-          // switching TO drop mode — clear standard fields
-          return { ...r, is_drop_set: true, sets: "", set_details: [], reps: "" };
+          // switching TO drop mode — keep sets (rounds), clear standard-only fields
+          return { ...r, is_drop_set: true, set_details: [], reps: "" };
         } else {
           // switching back to standard
           return { ...r, is_drop_set: false, drop_start: "", drop_per_stop: "", drop_end: "", drop_reps: "" };
@@ -208,10 +208,11 @@ export default function SessionEditor({ date, initialExercises }: Props) {
       const end = parseFloat(row.drop_end);
       const repsPerStop = parseInt(row.drop_reps) || 0;
       const seq = buildDropSeq(start, dropPer, end);
+      const setsCount = parseInt(String(row.sets)) || 1;
       return {
         exercise: row.exercise.trim(),
         muscle_group: row.muscle_group,
-        sets: 1,
+        sets: setsCount,
         reps: seq.length * repsPerStop,
         weight: start || null,
         notes: row.notes || null,
@@ -307,6 +308,7 @@ export default function SessionEditor({ date, initialExercises }: Props) {
         const ds = row.is_drop_set && row.drop_start && row.drop_per_stop && row.drop_end
           ? buildDropSeq(parseFloat(row.drop_start), parseFloat(row.drop_per_stop), parseFloat(row.drop_end))
           : [];
+        const dropSetsCount = parseInt(String(row.sets)) || 1;
         const dsTotalReps = ds.length * (parseInt(row.drop_reps) || 0);
 
         const isWeighted = row.is_drop_set
@@ -408,6 +410,14 @@ export default function SessionEditor({ date, initialExercises }: Props) {
             {row.is_drop_set ? (
               <div>
                 <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="mb-1 block text-xs font-medium text-muted">Sets <span className="text-muted/60">(rounds of this sequence)</span></label>
+                    <input
+                      type="number" value={String(row.sets)} placeholder="1" min="1"
+                      onChange={(e) => update(row.id, { sets: e.target.value })}
+                      className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                    />
+                  </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-orange-400">Start Weight (lb)</label>
                     <input
@@ -445,7 +455,7 @@ export default function SessionEditor({ date, initialExercises }: Props) {
                 {ds.length > 0 && (
                   <div className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-3">
                     <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-orange-400">
-                      {ds.length} stops · {dsTotalReps} total reps
+                      {dropSetsCount > 1 ? `${dropSetsCount} sets · ` : ""}{ds.length} stops · {dsTotalReps * dropSetsCount} total reps
                     </p>
                     <p className="text-sm text-muted">
                       {ds.map((w, i) => (
