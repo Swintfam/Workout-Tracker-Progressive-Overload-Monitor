@@ -7,12 +7,12 @@ import { useEffect, useState } from "react";
 
 const MUSCLE_GROUPS = ["Abs", "Pull", "Push", "Legs"] as const;
 
+type GoalType = "exercise_pr" | "muscle_volume" | "skill_hold";
+
 export default function NewGoalPage() {
   const router = useRouter();
 
-  const [goalType, setGoalType] = useState<"exercise_pr" | "muscle_volume">(
-    "exercise_pr"
-  );
+  const [goalType, setGoalType] = useState<GoalType>("exercise_pr");
   const [exerciseName, setExerciseName] = useState("");
   const [muscleGroup, setMuscleGroup] = useState<string>("Push");
   const [targetValue, setTargetValue] = useState("");
@@ -32,11 +32,12 @@ export default function NewGoalPage() {
     e.preventDefault();
     setError(null);
 
-    if (!targetValue || parseFloat(targetValue) <= 0) {
-      setError("Enter a target weight greater than 0.");
+    const val = parseFloat(targetValue);
+    if (!val || val <= 0) {
+      setError("Enter a target value greater than 0.");
       return;
     }
-    if (goalType === "exercise_pr" && !exerciseName.trim()) {
+    if ((goalType === "exercise_pr" || goalType === "skill_hold") && !exerciseName.trim()) {
       setError("Enter or select an exercise.");
       return;
     }
@@ -48,9 +49,9 @@ export default function NewGoalPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           goal_type: goalType,
-          exercise_name: goalType === "exercise_pr" ? exerciseName.trim() : undefined,
+          exercise_name: goalType !== "muscle_volume" ? exerciseName.trim() : undefined,
           muscle_group: goalType === "muscle_volume" ? muscleGroup : undefined,
-          target_value: parseFloat(targetValue),
+          target_value: val,
           target_date: targetDate || null,
         }),
       });
@@ -66,6 +67,14 @@ export default function NewGoalPage() {
       setSubmitting(false);
     }
   }
+
+  const targetLabel =
+    goalType === "skill_hold" ? "Target (seconds)" :
+    goalType === "exercise_pr" ? "Target (lb)" : "Target (lb total)";
+
+  const targetPlaceholder =
+    goalType === "skill_hold" ? "60" :
+    goalType === "exercise_pr" ? "225" : "10000";
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 sm:px-8">
@@ -97,6 +106,17 @@ export default function NewGoalPage() {
               </button>
               <button
                 type="button"
+                onClick={() => setGoalType("skill_hold")}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  goalType === "skill_hold"
+                    ? "bg-accent text-background"
+                    : "bg-surface-hover text-muted hover:text-foreground"
+                }`}
+              >
+                Skill Hold
+              </button>
+              <button
+                type="button"
                 onClick={() => setGoalType("muscle_volume")}
                 className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
                   goalType === "muscle_volume"
@@ -110,6 +130,8 @@ export default function NewGoalPage() {
             <p className="mt-2 text-xs text-muted">
               {goalType === "exercise_pr"
                 ? "Tracks the heaviest weight you've ever logged for one exercise."
+                : goalType === "skill_hold"
+                ? "Tracks your best hold time (in seconds) for a skill. Log reps = seconds held."
                 : "Tracks cumulative volume (sets × reps × weight) for a muscle group, starting from when this goal is created."}
             </p>
           </div>
@@ -119,27 +141,7 @@ export default function NewGoalPage() {
               Target
             </h2>
 
-            {goalType === "exercise_pr" ? (
-              <div className="mb-4">
-                <label className="mb-1 block text-sm font-medium" htmlFor="exercise">
-                  Exercise
-                </label>
-                <input
-                  id="exercise"
-                  type="text"
-                  list="exercise-options"
-                  value={exerciseName}
-                  onChange={(e) => setExerciseName(e.target.value)}
-                  placeholder="Select existing or type a new exercise"
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-                />
-                <datalist id="exercise-options">
-                  {exerciseOptions.map((name) => (
-                    <option key={name} value={name} />
-                  ))}
-                </datalist>
-              </div>
-            ) : (
+            {goalType === "muscle_volume" ? (
               <div className="mb-4">
                 <label className="mb-1 block text-sm font-medium" htmlFor="muscle-group">
                   Muscle Group
@@ -151,27 +153,45 @@ export default function NewGoalPage() {
                   className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
                 >
                   {MUSCLE_GROUPS.map((mg) => (
-                    <option key={mg} value={mg}>
-                      {mg}
-                    </option>
+                    <option key={mg} value={mg}>{mg}</option>
                   ))}
                 </select>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <label className="mb-1 block text-sm font-medium" htmlFor="exercise">
+                  Exercise
+                </label>
+                <input
+                  id="exercise"
+                  type="text"
+                  list="exercise-options"
+                  value={exerciseName}
+                  onChange={(e) => setExerciseName(e.target.value)}
+                  placeholder="e.g. Handstand Hold"
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+                <datalist id="exercise-options">
+                  {exerciseOptions.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-sm font-medium" htmlFor="target">
-                  Target ({goalType === "exercise_pr" ? "lb" : "lb total"})
+                  {targetLabel}
                 </label>
                 <input
                   id="target"
                   type="number"
                   value={targetValue}
                   onChange={(e) => setTargetValue(e.target.value)}
-                  placeholder={goalType === "exercise_pr" ? "225" : "10000"}
+                  placeholder={targetPlaceholder}
                   min="0"
-                  step="0.5"
+                  step={goalType === "skill_hold" ? "1" : "0.5"}
                   className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
                 />
               </div>

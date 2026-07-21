@@ -1,4 +1,4 @@
-import { Target, Plus } from "lucide-react";
+import { Pencil, Plus, Target } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import { getActiveGoals } from "@/lib/goals";
@@ -12,9 +12,14 @@ function GoalCard({
   const label =
     goal.goal_type === "exercise_pr"
       ? goal.exercise_name ?? "Exercise PR"
+      : goal.goal_type === "skill_hold"
+      ? goal.exercise_name ?? "Skill Hold"
       : `${goal.muscle_group} Volume`;
 
-  const unit = goal.goal_type === "exercise_pr" ? "lb" : "lb total";
+  const unit =
+    goal.goal_type === "skill_hold" ? "sec" :
+    goal.goal_type === "exercise_pr" ? "lb" : "lb total";
+
   const isComplete = goal.progress_pct >= 100;
 
   return (
@@ -23,7 +28,7 @@ function GoalCard({
         <div>
           <span className="text-sm font-medium">{label}</span>
           <span className="ml-2 rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
-            {goal.goal_type === "exercise_pr" ? "PR" : "Volume"}
+            {goal.goal_type === "exercise_pr" ? "PR" : goal.goal_type === "skill_hold" ? "Skill" : "Volume"}
           </span>
         </div>
         {isComplete && (
@@ -43,7 +48,7 @@ function GoalCard({
       <div className="h-2 w-full overflow-hidden rounded-full bg-surface-hover">
         <div
           className="h-full rounded-full bg-accent transition-all"
-          style={{ width: `${goal.progress_pct}%` }}
+          style={{ width: `${Math.min(goal.progress_pct, 100)}%` }}
         />
       </div>
 
@@ -54,7 +59,16 @@ function GoalCard({
             ? ` · by ${new Date(goal.target_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
             : ""}
         </span>
-        <ArchiveGoalButton goalId={goal.id} />
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/goals/${goal.id}/edit`}
+            className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted transition hover:bg-surface-hover hover:text-foreground"
+          >
+            <Pencil size={10} />
+            Edit
+          </Link>
+          <ArchiveGoalButton goalId={goal.id} />
+        </div>
       </div>
     </div>
   );
@@ -64,6 +78,7 @@ export default async function GoalsPage() {
   const goals = await getActiveGoals();
   const prGoals = goals.filter((g) => g.goal_type === "exercise_pr");
   const volumeGoals = goals.filter((g) => g.goal_type === "muscle_volume");
+  const skillGoals = goals.filter((g) => g.goal_type === "skill_hold");
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -99,6 +114,19 @@ export default async function GoalsPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-8">
+            {skillGoals.length > 0 && (
+              <section>
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                  Skill Goals
+                </h2>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {skillGoals.map((g) => (
+                    <GoalCard key={g.id} goal={g} />
+                  ))}
+                </div>
+              </section>
+            )}
+
             {prGoals.length > 0 && (
               <section>
                 <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">

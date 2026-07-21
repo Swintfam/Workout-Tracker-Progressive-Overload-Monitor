@@ -1,7 +1,7 @@
 import { getDbClient, getEffectiveUserId } from "@/lib/supabase/admin";
 import type { MuscleGroup } from "@/lib/workouts";
 
-export type GoalType = "exercise_pr" | "muscle_volume";
+export type GoalType = "exercise_pr" | "muscle_volume" | "skill_hold";
 
 export interface Goal {
   id: string;
@@ -54,6 +54,19 @@ async function computeCurrentValue(
     if (asOf) query = query.lte("date", asOf);
     const { data } = await query.order("weight", { ascending: false }).limit(1);
     return data?.[0]?.weight ?? 0;
+  }
+
+  if (goal.goal_type === "skill_hold") {
+    // Current value = best (max) reps logged for this exercise, where reps = seconds held
+    if (!goal.exercise_name) return 0;
+    let query = db
+      .from("workout_sessions")
+      .select("reps")
+      .eq("user_id", userId)
+      .eq("exercise", goal.exercise_name);
+    if (asOf) query = query.lte("date", asOf);
+    const { data } = await query.order("reps", { ascending: false }).limit(1);
+    return data?.[0]?.reps ?? 0;
   }
 
   if (goal.goal_type === "muscle_volume") {
@@ -143,6 +156,19 @@ export async function createGoal(input: CreateGoalInput): Promise<Goal> {
 
   if (error) throw new Error(error.message);
   return data;
+}
+
+export async function updateGoal(
+  goalId: string,
+  patch: { target_value?: number; target_date?: string | null }
+): Promise<void> {
+  const db = getDbClient();
+  const userId = await getEffectiveUserId();
+  await db
+    .from("goals")
+    .update(patch)
+    .eq("id", goalId)
+    .eq("user_id", userId);
 }
 
 export async function archiveGoal(goalId: string): Promise<void> {
