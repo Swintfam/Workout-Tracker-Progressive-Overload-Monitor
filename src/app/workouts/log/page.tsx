@@ -21,7 +21,6 @@ const EXERCISE_SUGGESTIONS: Record<string, string[]> = {
   "Full Body": ["Burpees", "Thrusters", "Turkish Get-Up", "Kettlebell Swings", "Man Makers"],
 };
 
-// One weight entry per set (reps are global)
 interface SetWeight { weight: string; }
 
 type ExMode = "standard" | "drop";
@@ -32,11 +31,9 @@ interface ExerciseRow {
   exercise: string;
   muscle_group: string;
   notes: string;
-  // Standard fields
   sets: string;
   reps: string;
-  set_weights: SetWeight[]; // one per set; length === parseInt(sets) when sets > 1
-  // Drop set fields
+  set_weights: SetWeight[];
   drop_start: string;
   drop_per_stop: string;
   drop_end: string;
@@ -54,10 +51,13 @@ function newExercise(muscle: string): ExerciseRow {
 }
 
 function buildDropSeq(start: number, drop: number, end: number): number[] {
-  if (!start || !drop || drop <= 0 || end < 0) return [];
+  if (!start || !drop || drop <= 0 || end < 0 || start < end) return [];
   const seq: number[] = [];
   let w = start;
-  while (w >= end - 0.01) { seq.push(Math.round(w * 10) / 10); w -= drop; }
+  while (w >= end - 0.01) {
+    seq.push(Math.round(w * 10) / 10);
+    w -= drop;
+  }
   return seq;
 }
 
@@ -85,7 +85,6 @@ export default function LogWorkoutPage() {
     const n = parseInt(val) || 0;
     setExercises(prev => prev.map(e => {
       if (e.id !== id) return e;
-      // Resize set_weights to match new set count
       const sw: SetWeight[] = n > 1
         ? Array.from({ length: n }, (_, i) => e.set_weights[i] ?? { weight: "" })
         : [];
@@ -101,10 +100,12 @@ export default function LogWorkoutPage() {
     }));
   }
 
-  function setMode(id: number, mode: ExMode) {
-    setExercises(prev => prev.map(e =>
-      e.id !== id ? e : { ...e, mode, sets: "", set_weights: [], reps: "" }
-    ));
+  function toggleDropSet(id: number) {
+    setExercises(prev => prev.map(e => {
+      if (e.id !== id) return e;
+      const newMode: ExMode = e.mode === "drop" ? "standard" : "drop";
+      return { ...e, mode: newMode, sets: "", reps: "", set_weights: [] };
+    }));
   }
 
   async function handleSubmit(ev: React.FormEvent) {
@@ -113,8 +114,8 @@ export default function LogWorkoutPage() {
 
     const valid = exercises.filter(e => {
       if (!e.exercise.trim()) return false;
-      if (e.mode === "drop") return e.drop_start && e.drop_per_stop && e.drop_end && e.drop_reps;
-      return e.sets && e.reps;
+      if (e.mode === "drop") return !!(e.drop_start && e.drop_per_stop && e.drop_end && e.drop_reps);
+      return !!(e.sets && e.reps);
     });
     if (!valid.length) { setError("Add at least one complete exercise."); return; }
 
@@ -138,7 +139,6 @@ export default function LogWorkoutPage() {
             set_data: seq.map((w, i) => ({ set: i + 1, reps: repsPerStop, weight: w })),
           };
         }
-        // Standard
         const setsN = parseInt(ex.sets) || 1;
         const repsN = parseInt(ex.reps) || 0;
         const isMulti = setsN > 1 && ex.set_weights.length > 0;
@@ -176,7 +176,7 @@ export default function LogWorkoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background px-4 py-6 sm:px-8">
+    <div className="min-h-screen bg-background px-4 py-6 sm:px-8 pb-28 lg:pb-6">
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex items-center gap-3">
           <Link href="/workouts" className="rounded-xl p-2 text-muted transition hover:bg-surface-hover hover:text-foreground">
@@ -225,34 +225,37 @@ export default function LogWorkoutPage() {
               const suggestions = EXERCISE_SUGGESTIONS[ex.muscle_group] ?? [];
               const setsN = parseInt(ex.sets) || 0;
               const isMultiSet = ex.mode === "standard" && setsN > 1;
+              const isDropMode = ex.mode === "drop";
 
-              // Drop set preview
-              const ds = ex.mode === "drop" && ex.drop_start && ex.drop_per_stop && ex.drop_end
-                ? buildDropSeq(parseFloat(ex.drop_start), parseFloat(ex.drop_per_stop), parseFloat(ex.drop_end))
+              const dropStart = parseFloat(ex.drop_start);
+              const dropPer = parseFloat(ex.drop_per_stop);
+              const dropEnd = parseFloat(ex.drop_end);
+              const ds = (isDropMode && ex.drop_start && ex.drop_per_stop && ex.drop_end)
+                ? buildDropSeq(dropStart, dropPer, dropEnd)
                 : [];
               const dsTotalReps = ds.length * (parseInt(ex.drop_reps) || 0);
 
               return (
-                <div key={ex.id} className={`rounded-2xl border bg-surface p-4 transition-colors ${ex.mode === "drop" ? "border-orange-500/40" : "border-border"}`}>
+                <div key={ex.id}
+                  style={{ borderColor: isDropMode ? "rgba(249,115,22,0.4)" : undefined }}
+                  className={`rounded-2xl border bg-surface p-4 ${isDropMode ? "" : "border-border"}`}>
 
-                  {/* Header */}
+                  {/* Card header */}
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-muted">#{idx + 1}</span>
-                      {ex.mode === "drop" && (
-                        <span className="rounded-md bg-orange-500/20 px-2 py-0.5 text-[10px] font-bold text-orange-400">DROP SET</span>
+                      {isDropMode && (
+                        <span style={{ background: "rgba(249,115,22,0.2)", color: "#fb923c" }}
+                          className="rounded-md px-2 py-0.5 text-[10px] font-bold">DROP SET</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Mode toggle */}
-                      <button type="button"
-                        onClick={() => setMode(ex.id, ex.mode === "drop" ? "standard" : "drop")}
+                      <button type="button" onClick={() => toggleDropSet(ex.id)}
+                        style={isDropMode ? { background: "rgba(249,115,22,0.2)", color: "#fb923c" } : undefined}
                         className={`rounded-lg px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition ${
-                          ex.mode === "drop"
-                            ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
-                            : "text-muted hover:bg-surface-hover hover:text-foreground"
+                          isDropMode ? "hover:opacity-80" : "text-muted hover:bg-surface-hover hover:text-foreground"
                         }`}>
-                        {ex.mode === "drop" ? "Drop ✓" : "Drop Set"}
+                        {isDropMode ? "Drop ✓" : "Drop Set"}
                       </button>
                       {exercises.length > 1 && (
                         <button type="button" onClick={() => setExercises(prev => prev.filter(e => e.id !== ex.id))}
@@ -263,9 +266,9 @@ export default function LogWorkoutPage() {
                     </div>
                   </div>
 
-                  {/* Exercise + muscle group + notes — always shown */}
-                  <div className="mb-3 grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
+                  {/* Always-visible fields */}
+                  <div className="mb-3">
+                    <div className="mb-3">
                       <label className="mb-1 block text-xs font-medium text-muted">Exercise</label>
                       <input type="text" list={`sugg-${ex.id}`} value={ex.exercise}
                         onChange={e => updateEx(ex.id, { exercise: e.target.value })}
@@ -273,24 +276,26 @@ export default function LogWorkoutPage() {
                         className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
                       <datalist id={`sugg-${ex.id}`}>{suggestions.map(s => <option key={s} value={s} />)}</datalist>
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-muted">Muscle Group</label>
-                      <select value={ex.muscle_group} onChange={e => updateEx(ex.id, { muscle_group: e.target.value })}
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50">
-                        {MUSCLE_GROUPS.map(mg => <option key={mg} value={mg}>{mg}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-muted">Notes <span className="text-muted/60">optional</span></label>
-                      <input type="text" value={ex.notes} onChange={e => updateEx(ex.id, { notes: e.target.value })}
-                        placeholder="e.g. slow negatives"
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-muted">Muscle Group</label>
+                        <select value={ex.muscle_group} onChange={e => updateEx(ex.id, { muscle_group: e.target.value })}
+                          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50">
+                          {MUSCLE_GROUPS.map(mg => <option key={mg} value={mg}>{mg}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-muted">Notes <span className="text-muted/60">optional</span></label>
+                        <input type="text" value={ex.notes} onChange={e => updateEx(ex.id, { notes: e.target.value })}
+                          placeholder="e.g. slow negatives"
+                          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
+                      </div>
                     </div>
                   </div>
 
-                  {/* ── STANDARD MODE ── */}
-                  {ex.mode === "standard" && (
-                    <>
+                  {/* STANDARD MODE */}
+                  {!isDropMode && (
+                    <div>
                       <div className="grid grid-cols-3 gap-3">
                         <div>
                           <label className="mb-1 block text-xs font-medium text-muted">Sets</label>
@@ -299,15 +304,14 @@ export default function LogWorkoutPage() {
                             className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-muted">Reps <span className="text-muted/60">(or secs)</span></label>
+                          <label className="mb-1 block text-xs font-medium text-muted">Reps</label>
                           <input type="number" value={ex.reps} onChange={e => updateEx(ex.id, { reps: e.target.value })}
                             placeholder="10" min="1"
                             className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
                         </div>
-                        {/* Single-set weight — only shown when sets = 1 */}
                         {!isMultiSet && (
                           <div>
-                            <label className="mb-1 block text-xs font-medium text-muted">Weight (lb) <span className="text-muted/60">opt</span></label>
+                            <label className="mb-1 block text-xs font-medium text-muted">Weight (lb)</label>
                             <input type="number" value={ex.set_weights[0]?.weight ?? ""} min="0" step="0.5"
                               onChange={e => handleSetWeight(ex.id, 0, e.target.value)}
                               placeholder="bw"
@@ -315,11 +319,9 @@ export default function LogWorkoutPage() {
                           </div>
                         )}
                       </div>
-
-                      {/* Per-set weights when sets > 1 */}
                       {isMultiSet && (
-                        <div className="mt-3 flex flex-col gap-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Weight per set (lb)</p>
+                        <div className="mt-3">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted">Weight per set (lb)</p>
                           <div className="grid grid-cols-3 gap-2">
                             {ex.set_weights.map((sw, i) => (
                               <div key={i}>
@@ -333,52 +335,61 @@ export default function LogWorkoutPage() {
                           </div>
                         </div>
                       )}
-                    </>
+                    </div>
                   )}
 
-                  {/* ── DROP SET MODE ── */}
-                  {ex.mode === "drop" && (
+                  {/* DROP SET MODE */}
+                  {isDropMode && (
                     <div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="mb-1 block text-xs font-medium text-muted">Start Weight (lb)</label>
-                          <input type="number" value={ex.drop_start} onChange={e => updateEx(ex.id, { drop_start: e.target.value })}
+                          <input type="number" value={ex.drop_start}
+                            onChange={e => updateEx(ex.id, { drop_start: e.target.value })}
                             placeholder="330" min="0" step="5"
-                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30" />
+                            style={{ borderColor: "rgba(249,115,22,0.4)", background: "rgba(249,115,22,0.08)" }}
+                            className="w-full rounded-xl px-3 py-2 text-sm focus:outline-none" />
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-muted">Drop Per Stop (lb)</label>
-                          <input type="number" value={ex.drop_per_stop} onChange={e => updateEx(ex.id, { drop_per_stop: e.target.value })}
+                          <input type="number" value={ex.drop_per_stop}
+                            onChange={e => updateEx(ex.id, { drop_per_stop: e.target.value })}
                             placeholder="30" min="1" step="5"
-                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30" />
+                            style={{ borderColor: "rgba(249,115,22,0.4)", background: "rgba(249,115,22,0.08)" }}
+                            className="w-full rounded-xl px-3 py-2 text-sm focus:outline-none" />
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-muted">End Weight (lb)</label>
-                          <input type="number" value={ex.drop_end} onChange={e => updateEx(ex.id, { drop_end: e.target.value })}
+                          <input type="number" value={ex.drop_end}
+                            onChange={e => updateEx(ex.id, { drop_end: e.target.value })}
                             placeholder="50" min="0" step="5"
-                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30" />
+                            style={{ borderColor: "rgba(249,115,22,0.4)", background: "rgba(249,115,22,0.08)" }}
+                            className="w-full rounded-xl px-3 py-2 text-sm focus:outline-none" />
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-muted">Reps Per Stop</label>
-                          <input type="number" value={ex.drop_reps} onChange={e => updateEx(ex.id, { drop_reps: e.target.value })}
+                          <input type="number" value={ex.drop_reps}
+                            onChange={e => updateEx(ex.id, { drop_reps: e.target.value })}
                             placeholder="10" min="1"
-                            className="w-full rounded-xl border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30" />
+                            style={{ borderColor: "rgba(249,115,22,0.4)", background: "rgba(249,115,22,0.08)" }}
+                            className="w-full rounded-xl px-3 py-2 text-sm focus:outline-none" />
                         </div>
                       </div>
 
                       {ds.length > 0 && (
-                        <div className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-3">
-                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-orange-400">
+                        <div className="mt-3 rounded-xl px-4 py-3"
+                          style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)" }}>
+                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#fb923c" }}>
                             {ds.length} stops · {dsTotalReps} total reps
                           </p>
                           <p className="text-sm text-muted">
                             {ds.map((w, i) => (
                               <span key={i}>
                                 <span className="font-medium text-foreground">{w}</span>
-                                {i < ds.length - 1 && <span className="text-orange-400"> → </span>}
+                                {i < ds.length - 1 && <span style={{ color: "#fb923c" }}> → </span>}
                               </span>
                             ))}
-                            <span className="ml-1 text-muted/60">lb</span>
+                            <span className="ml-1 text-muted"> lb</span>
                           </p>
                         </div>
                       )}
@@ -389,14 +400,17 @@ export default function LogWorkoutPage() {
             })}
 
             {exercises.length < 8 && (
-              <button type="button" onClick={() => setExercises(prev => [...prev, newExercise(SESSION_TO_MUSCLE[sessionType] ?? "Full Body")])}
+              <button type="button"
+                onClick={() => setExercises(prev => [...prev, newExercise(SESSION_TO_MUSCLE[sessionType] ?? "Full Body")])}
                 className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-3 text-sm text-muted transition hover:border-accent/40 hover:text-accent">
                 <Plus size={16} /> Add Exercise
               </button>
             )}
           </div>
 
-          {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
+          {error && (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>
+          )}
 
           <button type="submit" disabled={submitting}
             className="rounded-xl bg-accent py-3 text-sm font-semibold text-background transition hover:bg-accent-dark disabled:opacity-50">
