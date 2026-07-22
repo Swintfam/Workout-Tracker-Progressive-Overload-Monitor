@@ -12,6 +12,7 @@ import {
   Target,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
@@ -35,6 +36,16 @@ const bottomTabs = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [displayName, setDisplayName] = useState("You");
+
+  useEffect(() => {
+    fetch("/api/user-targets")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.display_name) setDisplayName(data.display_name);
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleSignOut() {
     const supabase = getSupabaseBrowser();
@@ -80,10 +91,10 @@ export default function Sidebar() {
       <div>
         <div className="mb-8 flex items-center gap-2 px-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent font-bold text-background">
-            N
+            {displayName.charAt(0).toUpperCase()}
           </div>
           <div>
-            <p className="text-sm font-semibold leading-tight">Naeem</p>
+            <p className="text-sm font-semibold leading-tight">{displayName}</p>
             <p className="text-xs leading-tight text-muted">Dashboard</p>
           </div>
         </div>

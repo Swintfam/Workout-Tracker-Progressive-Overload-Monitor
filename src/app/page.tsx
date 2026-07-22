@@ -11,9 +11,9 @@ import {
   getWeeklyVolumeByDay,
   getLastSession,
   getNextPlannedSession,
-  REP_TARGETS,
 } from "@/lib/workouts";
 import { getWeekMood } from "@/lib/mental";
+import { getUserTargets } from "@/lib/targets";
 
 export default async function DashboardPage() {
   const today = new Date().toLocaleDateString("en-US", {
@@ -23,13 +23,14 @@ export default async function DashboardPage() {
   });
   const todayStr = new Date().toISOString().split("T")[0];
 
-  const [repTotals, sessionCount, volumeByDay, lastSession, weekMood, nextSession] = await Promise.all([
+  const [repTotals, sessionCount, volumeByDay, lastSession, weekMood, nextSession, userTargets] = await Promise.all([
     getWeeklyRepTotals(),
     getWeeklySessionCount(),
     getWeeklyVolumeByDay(),
     getLastSession(),
     getWeekMood(),
     getNextPlannedSession(),
+    getUserTargets(),
   ]);
 
   const totalWeeklyVolume = volumeByDay.reduce((sum, d) => sum + d.volume, 0);
@@ -67,7 +68,15 @@ export default async function DashboardPage() {
     },
   ];
 
-  const repGoals = (Object.entries(REP_TARGETS) as [string, number][]).map(
+  const displayName = userTargets?.display_name ?? "there";
+  const repTargetMap = {
+    Abs: userTargets?.abs_weekly_reps ?? 0,
+    Pull: userTargets?.pull_weekly_reps ?? 0,
+    Push: userTargets?.push_weekly_reps ?? 0,
+    Legs: userTargets?.legs_weekly_reps ?? 0,
+  };
+
+  const repGoals = (Object.entries(repTargetMap) as [string, number][]).map(
     ([label, target]) => ({
       label: `${label} reps`,
       current: repTotals[label as keyof typeof repTotals] ?? 0,
@@ -82,7 +91,7 @@ export default async function DashboardPage() {
       <main className="flex-1 px-8 py-6">
         <header className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Welcome back, Naeem</h1>
+            <h1 className="text-2xl font-semibold">Welcome back, {displayName}</h1>
             <p className="text-sm text-muted">{today}</p>
           </div>
         </header>
