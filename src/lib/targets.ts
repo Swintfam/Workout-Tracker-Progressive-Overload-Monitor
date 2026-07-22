@@ -1,4 +1,4 @@
-import { getDbClient, getEffectiveUserId } from "@/lib/supabase/admin";
+import { createAdminClient, getEffectiveUserId } from "@/lib/supabase/admin";
 
 export interface UserTargets {
   user_id: string;
@@ -11,7 +11,7 @@ export interface UserTargets {
 }
 
 export async function getUserTargets(): Promise<UserTargets | null> {
-  const db = getDbClient();
+  const db = createAdminClient();
   const userId = await getEffectiveUserId();
 
   const { data } = await db
@@ -31,7 +31,7 @@ export async function upsertUserTargets(patch: {
   legs_weekly_reps?: number;
   onboarding_complete?: boolean;
 }): Promise<void> {
-  const db = getDbClient();
+  const db = createAdminClient();
   const userId = await getEffectiveUserId();
 
   await db.from("user_targets").upsert({

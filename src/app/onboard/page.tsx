@@ -78,14 +78,21 @@ export default function OnboardPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data?.onboarding_complete === true) {
+          // Already set up — just set the cookie and go to dashboard
           document.cookie =
             "app_onboarded=1; path=/; max-age=" + 60 * 60 * 24 * 365 + "; SameSite=Lax";
           router.replace("/");
         } else {
+          // New user — show the wizard
           setChecking(false);
         }
       })
-      .catch(() => setChecking(false));
+      .catch(() => {
+        // API error — don't block the user; set cookie and redirect
+        document.cookie =
+          "app_onboarded=1; path=/; max-age=" + 60 * 60 * 24 * 365 + "; SameSite=Lax";
+        router.replace("/");
+      });
   }, [router]);
 
   function handleFocusSelect(f: Focus) {

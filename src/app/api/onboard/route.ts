@@ -1,4 +1,4 @@
-import { getDbClient, getEffectiveUserId } from "@/lib/supabase/admin";
+import { createAdminClient, getEffectiveUserId } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       skipped = false,
     } = body;
 
-    const db = getDbClient();
+    const db = createAdminClient();
     const userId = await getEffectiveUserId();
 
     // Upsert rep targets + display name
