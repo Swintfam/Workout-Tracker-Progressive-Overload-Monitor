@@ -1,4 +1,4 @@
-import { createAdminClient, getEffectiveUserId } from "@/lib/supabase/admin";
+import { createAdminClient, createAuthClient, getEffectiveUserId } from "@/lib/supabase/admin";
 
 export interface UserTargets {
   user_id: string;
@@ -10,8 +10,14 @@ export interface UserTargets {
   onboarding_complete: boolean;
 }
 
+// In production use the auth client (user JWT satisfies RLS auth.uid() = user_id).
+// In dev use the admin client (no real session exists locally).
+function getDbClient() {
+  return process.env.NODE_ENV === "production" ? createAuthClient() : createAdminClient();
+}
+
 export async function getUserTargets(): Promise<UserTargets | null> {
-  const db = createAdminClient();
+  const db = getDbClient();
   const userId = await getEffectiveUserId();
 
   const { data } = await db
@@ -31,7 +37,7 @@ export async function upsertUserTargets(patch: {
   legs_weekly_reps?: number;
   onboarding_complete?: boolean;
 }): Promise<void> {
-  const db = createAdminClient();
+  const db = getDbClient();
   const userId = await getEffectiveUserId();
 
   await db.from("user_targets").upsert({
