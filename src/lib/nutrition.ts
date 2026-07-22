@@ -38,6 +38,8 @@ export interface NutritionLog {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  fiber_g: number | null;
+  sugar_g: number | null;
   notes: string | null;
   created_at: string;
 }
@@ -164,6 +166,8 @@ export interface AddLogInput {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  fiber_g?: number | null;
+  sugar_g?: number | null;
   notes?: string | null;
 }
 
@@ -184,6 +188,8 @@ export async function addLog(input: AddLogInput): Promise<NutritionLog> {
       protein_g: input.protein_g,
       carbs_g: input.carbs_g,
       fat_g: input.fat_g,
+      fiber_g: input.fiber_g ?? null,
+      sugar_g: input.sugar_g ?? null,
       notes: input.notes ?? null,
     })
     .select()
