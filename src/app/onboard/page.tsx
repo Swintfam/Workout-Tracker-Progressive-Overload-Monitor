@@ -72,28 +72,29 @@ export default function OnboardPage() {
   const [carbsWeekly, setCarbsWeekly] = useState("");
   const [fatWeekly, setFatWeekly] = useState("");
 
-  // Check if already onboarded — set cookie + redirect
+  // Check if already onboarded — cookie is set server-side in the response,
+  // then we do a hard navigation so middleware sees it immediately.
   useEffect(() => {
     fetch("/api/user-targets")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("api_error");
+        return r.json();
+      })
       .then((data) => {
         if (data?.onboarding_complete === true) {
-          // Already set up — just set the cookie and go to dashboard
-          document.cookie =
-            "app_onboarded=1; path=/; max-age=" + 60 * 60 * 24 * 365 + "; SameSite=Lax";
-          router.replace("/");
+          // Cookie already set by server in the GET response — hard navigate
+          window.location.href = "/";
         } else {
-          // New user — show the wizard
           setChecking(false);
         }
       })
       .catch(() => {
-        // API error — don't block the user; set cookie and redirect
+        // Network or server error — set cookie client-side as fallback, hard navigate
         document.cookie =
           "app_onboarded=1; path=/; max-age=" + 60 * 60 * 24 * 365 + "; SameSite=Lax";
-        router.replace("/");
+        window.location.href = "/";
       });
-  }, [router]);
+  }, []);
 
   function handleFocusSelect(f: Focus) {
     setFocus(f);
@@ -124,10 +125,9 @@ export default function OnboardPage() {
         const json = await res.json();
         throw new Error(json.error ?? "Save failed");
       }
-      document.cookie =
-        "app_onboarded=1; path=/; max-age=" + 60 * 60 * 24 * 365 + "; SameSite=Lax";
+      // Cookie is set server-side in the POST response — hard navigate so middleware sees it
       if (skipped) {
-        router.push("/");
+        window.location.href = "/";
       } else {
         setStep(5);
       }
@@ -418,7 +418,7 @@ export default function OnboardPage() {
               </p>
               <button
                 type="button"
-                onClick={() => router.push("/")}
+                onClick={() => { window.location.href = "/"; }}
                 className="rounded-xl bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/20 border border-white/10"
               >
                 Go to Dashboard
