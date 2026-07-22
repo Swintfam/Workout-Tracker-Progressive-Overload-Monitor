@@ -1,5 +1,4 @@
 "use client";
-
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -7,12 +6,10 @@ import { useState } from "react";
 
 const SESSION_TYPES = ["Push", "Pull", "Legs", "Skill", "Cardio", "Mixed"] as const;
 const MUSCLE_GROUPS = ["Abs", "Pull", "Push", "Legs", "Full Body"] as const;
-
 const SESSION_TO_MUSCLE: Record<string, string> = {
   Push: "Push", Pull: "Pull", Legs: "Legs",
   Skill: "Pull", Cardio: "Legs", Mixed: "Full Body",
 };
-
 const EXERCISE_SUGGESTIONS: Record<string, string[]> = {
   Abs: ["Hanging Leg Raises", "Dragon Flag", "Ab Wheel", "Plank", "Hollow Body Hold", "L-Sit", "Toes to Bar", "V-Ups", "Flutter Kicks", "Dead Bug"],
   Pull: ["Pull-Ups", "Wide Grip Pull-Up", "Archer Pull-Up", "Chin-Ups", "Australian Pull-Ups", "Muscle-Up", "Muscle-Up Negative", "Rows", "Cable Rows", "Lat Pulldown", "Face Pulls", "Deadlift", "Hammer Curls"],
@@ -23,9 +20,7 @@ const EXERCISE_SUGGESTIONS: Record<string, string[]> = {
 
 // One weight entry per set (reps are global)
 interface SetWeight { weight: string; }
-
 type ExMode = "standard" | "drop";
-
 interface ExerciseRow {
   id: number;
   mode: ExMode;
@@ -96,7 +91,9 @@ export default function LogWorkoutPage() {
   function handleSetWeight(id: number, idx: number, val: string) {
     setExercises(prev => prev.map(e => {
       if (e.id !== id) return e;
-      const sw = e.set_weights.map((s, i) => i === idx ? { weight: val } : s);
+      const sw = [...e.set_weights];
+      while (sw.length <= idx) sw.push({ weight: "" });
+      sw[idx] = { weight: val };
       return { ...e, set_weights: sw };
     }));
   }
@@ -111,14 +108,12 @@ export default function LogWorkoutPage() {
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault();
     setError(null);
-
     const valid = exercises.filter(e => {
       if (!e.exercise.trim()) return false;
       if (e.mode === "drop") return e.drop_start && e.drop_per_stop && e.drop_end && e.drop_reps;
       return e.sets && e.reps;
     });
     if (!valid.length) { setError("Add at least one complete exercise."); return; }
-
     setSubmitting(true);
     try {
       const payload = valid.map(ex => {
@@ -152,7 +147,7 @@ export default function LogWorkoutPage() {
           : null;
         const summaryWeight = isMulti
           ? (Math.max(...ex.set_weights.map(s => parseFloat(s.weight) || 0)) || null)
-          : null;
+          : (ex.set_weights[0]?.weight ? parseFloat(ex.set_weights[0].weight) : null);
         return {
           exercise: ex.exercise.trim(),
           muscle_group: ex.muscle_group,
@@ -163,7 +158,6 @@ export default function LogWorkoutPage() {
           set_data,
         };
       });
-
       const res = await fetch("/api/workouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -186,7 +180,6 @@ export default function LogWorkoutPage() {
           </Link>
           <h1 className="text-xl font-semibold">Log Session</h1>
         </div>
-
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {/* Session info */}
           <div className="rounded-2xl border border-border bg-surface p-5">
@@ -215,29 +208,24 @@ export default function LogWorkoutPage() {
               </div>
             </div>
           </div>
-
           {/* Exercises */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Exercises</h2>
               <p className="text-xs text-muted">Seconds as reps for TUT</p>
             </div>
-
             {exercises.map((ex, idx) => {
               const suggestions = EXERCISE_SUGGESTIONS[ex.muscle_group] ?? [];
               const setsN = parseInt(ex.sets) || 0;
               const isMultiSet = ex.mode === "standard" && setsN > 1;
-
               // Drop set preview
               const ds = ex.mode === "drop" && ex.drop_start && ex.drop_per_stop && ex.drop_end
                 ? buildDropSeq(parseFloat(ex.drop_start), parseFloat(ex.drop_per_stop), parseFloat(ex.drop_end))
                 : [];
               const dropSetsCount = parseInt(ex.sets) || 1;
               const dsTotalReps = ds.length * (parseInt(ex.drop_reps) || 0);
-
               return (
                 <div key={ex.id} className={`rounded-2xl border bg-surface p-4 transition-colors ${ex.mode === "drop" ? "border-orange-500/40" : "border-border"}`}>
-
                   {/* Header */}
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -265,7 +253,6 @@ export default function LogWorkoutPage() {
                       )}
                     </div>
                   </div>
-
                   {/* Exercise + muscle group + notes — always shown */}
                   <div className="mb-3 grid grid-cols-2 gap-3">
                     <div className="col-span-2">
@@ -290,7 +277,6 @@ export default function LogWorkoutPage() {
                         className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
                     </div>
                   </div>
-
                   {/* ── MODE SWITCHER (ternary guarantees exactly one branch renders) ── */}
                   {ex.mode === "drop" ? (
                     <div>
@@ -326,7 +312,6 @@ export default function LogWorkoutPage() {
                             className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                       </div>
-
                       {ds.length > 0 && (
                         <div className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-3">
                           <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-orange-400">
@@ -391,7 +376,6 @@ export default function LogWorkoutPage() {
                 </div>
               );
             })}
-
             {exercises.length < 8 && (
               <button type="button" onClick={() => setExercises(prev => [...prev, newExercise(SESSION_TO_MUSCLE[sessionType] ?? "Full Body")])}
                 className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-3 text-sm text-muted transition hover:border-accent/40 hover:text-accent">
@@ -399,9 +383,7 @@ export default function LogWorkoutPage() {
               </button>
             )}
           </div>
-
           {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
-
           <button type="submit" disabled={submitting}
             className="rounded-xl bg-accent py-3 text-sm font-semibold text-background transition hover:bg-accent-dark disabled:opacity-50">
             {submitting ? "Saving..." : "Save Session"}
