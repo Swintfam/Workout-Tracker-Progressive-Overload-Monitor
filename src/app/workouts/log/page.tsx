@@ -5,16 +5,19 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const SESSION_TYPES = ["Push", "Pull", "Legs", "Skill", "Cardio", "Mixed"] as const;
-const MUSCLE_GROUPS = ["Abs", "Pull", "Push", "Legs", "Full Body"] as const;
+const MUSCLE_GROUPS = ["Abs", "Pull", "Push", "Legs", "Skill", "Cardio", "Mixed", "Full Body"] as const;
 const SESSION_TO_MUSCLE: Record<string, string> = {
   Push: "Push", Pull: "Pull", Legs: "Legs",
-  Skill: "Pull", Cardio: "Legs", Mixed: "Full Body",
+  Skill: "Skill", Cardio: "Cardio", Mixed: "Mixed",
 };
 const EXERCISE_SUGGESTIONS: Record<string, string[]> = {
   Abs: ["Hanging Leg Raises", "Dragon Flag", "Ab Wheel", "Plank", "Hollow Body Hold", "L-Sit", "Toes to Bar", "V-Ups", "Flutter Kicks", "Dead Bug"],
   Pull: ["Pull-Ups", "Wide Grip Pull-Up", "Archer Pull-Up", "Chin-Ups", "Australian Pull-Ups", "Muscle-Up", "Muscle-Up Negative", "Rows", "Cable Rows", "Lat Pulldown", "Face Pulls", "Deadlift", "Hammer Curls"],
   Push: ["Push-Ups", "Dips", "Bench Press", "Overhead Press", "Incline Press", "Iron Cross", "Tricep Pushdown", "Diamond Push-Ups", "Pike Push-Ups", "Chest Fly", "Lateral Raises"],
   Legs: ["Squats", "Lunges", "Romanian Deadlift", "Leg Press", "Calf Raises", "Bulgarian Split Squat", "Hip Thrust", "Leg Extensions", "Nordic Curl", "Hamstring Curl Machine", "Box Jumps", "Hip Abduction", "Hip Adduction", "Pistol Squats", "Sumo Squat", "Wall Sit", "Glute Kickback"],
+  Skill: ["Handstand Hold", "Handstand Push-Up", "Handstand Walk", "Muscle-Up", "Muscle-Up Negative", "Ring Muscle-Up", "L-Sit", "V-Sit", "Front Lever", "Front Lever Raises", "Back Lever", "Planche Lean", "Tuck Planche", "Advanced Tuck Planche", "Ring Dips", "Ring Push-Ups", "Ring Rows", "Human Flag", "Dragon Flag", "Skin the Cat", "Hollow Body Hold", "Arch Body Hold", "Pistol Squat"],
+  Cardio: ["Running", "Treadmill Run", "Sprints", "Cycling", "Stationary Bike", "Assault Bike", "Rowing Machine", "Jump Rope", "Battle Ropes", "Stair Climber", "Elliptical", "Swimming", "Sled Push", "Farmer's Carry", "Box Step-Ups"],
+  Mixed: ["Thrusters", "Turkish Get-Up", "Kettlebell Swings", "Man Makers", "Burpees", "Clean and Press", "Devil Press", "Bear Complex", "Wall Balls", "Medicine Ball Slams", "Sandbag Carry", "Deadlift to Row", "Pull-Up to Dip", "Squat to Press"],
   "Full Body": ["Burpees", "Thrusters", "Turkish Get-Up", "Kettlebell Swings", "Man Makers"],
 };
 
@@ -233,9 +236,13 @@ export default function LogWorkoutPage() {
                       {ex.mode === "drop" && (
                         <span className="rounded-md bg-orange-500/20 px-2 py-0.5 text-[10px] font-bold text-orange-400">DROP SET</span>
                       )}
+                      {ex.muscle_group === "Cardio" && (
+                        <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-400">CARDIO</span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Mode toggle */}
+                      {/* Mode toggle — hidden for cardio */}
+                      {ex.muscle_group !== "Cardio" && (
                       <button type="button"
                         onClick={() => setMode(ex.id, ex.mode === "drop" ? "standard" : "drop")}
                         className={`rounded-lg px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition ${
@@ -245,6 +252,7 @@ export default function LogWorkoutPage() {
                         }`}>
                         {ex.mode === "drop" ? "Drop ✓" : "Drop Set"}
                       </button>
+                      )}
                       {exercises.length > 1 && (
                         <button type="button" onClick={() => setExercises(prev => prev.filter(e => e.id !== ex.id))}
                           className="rounded-lg p-1 text-muted transition hover:bg-surface-hover hover:text-foreground">
@@ -328,6 +336,29 @@ export default function LogWorkoutPage() {
                           </p>
                         </div>
                       )}
+                    </div>
+                  ) : ex.muscle_group === "Cardio" ? (
+                    /* ── CARDIO MODE ── */
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-muted">Intervals</label>
+                        <input type="number" value={ex.sets} onChange={e => handleSets(ex.id, e.target.value)}
+                          placeholder="1" min="1"
+                          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-blue-400">Distance (mi)</label>
+                        <input type="number" value={ex.reps} onChange={e => updateEx(ex.id, { reps: e.target.value })}
+                          placeholder="3.1" min="0" step="0.1"
+                          className="w-full rounded-xl border border-blue-400/40 bg-blue-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/50" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-blue-400">Duration (min)</label>
+                        <input type="number" value={ex.set_weights[0]?.weight ?? ""} min="0" step="1"
+                          onChange={e => handleSetWeight(ex.id, 0, e.target.value)}
+                          placeholder="30"
+                          className="w-full rounded-xl border border-blue-400/40 bg-blue-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/50" />
+                      </div>
                     </div>
                   ) : (
                     /* ── STANDARD MODE ── */
