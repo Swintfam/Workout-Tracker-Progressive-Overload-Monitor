@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const SESSION_TYPES = ["Push", "Pull", "Legs", "Skill", "Cardio", "Mixed"] as const;
+
+// Exercises where the "reps" field represents seconds held
+const HOLD_EXERCISES = new Set([
+  "Handstand Hold", "L-Sit", "V-Sit", "Front Lever", "Back Lever",
+  "Planche Lean", "Tuck Planche", "Advanced Tuck Planche", "Human Flag",
+  "Hollow Body Hold", "Arch Body Hold", "Iron Cross", "Plank", "Wall Sit",
+  "Dead Hang", "Ring Support Hold",
+]);
 const MUSCLE_GROUPS = ["Abs", "Pull", "Push", "Legs", "Skill", "Cardio", "Mixed", "Full Body"] as const;
 const SESSION_TO_MUSCLE: Record<string, string> = {
   Push: "Push", Pull: "Pull", Legs: "Legs",
@@ -371,9 +379,9 @@ export default function LogWorkoutPage() {
                             className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-muted">Reps</label>
+                          <label className="mb-1 block text-xs font-medium text-muted">{HOLD_EXERCISES.has(ex.exercise) ? "Seconds" : "Reps"}</label>
                           <input type="number" value={ex.reps} onChange={e => updateEx(ex.id, { reps: e.target.value })}
-                            placeholder="10" min="1"
+                            placeholder={HOLD_EXERCISES.has(ex.exercise) ? "30" : "10"} min="1"
                             className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50" />
                         </div>
                         {!isMultiSet && (
