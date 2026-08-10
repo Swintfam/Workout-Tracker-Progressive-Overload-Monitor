@@ -108,6 +108,8 @@ export default function NutritionLogForm({ date, isOpen, initialSlot, onClose }:
 
   // Photo tab state
   const [phase, setPhase] = useState<Phase>("upload");
+  // Hoisted so TypeScript doesn't narrow these away inside JSX phase guards
+  const phaseIsLogging  = (phase as string) === "logging";
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [analysisNotes, setAnalysisNotes] = useState<string | null>(null);
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
@@ -511,10 +513,10 @@ export default function NutritionLogForm({ date, isOpen, initialSlot, onClose }:
                     </button>
                     <button
                       onClick={logReviewItems}
-                      disabled={phase === "logging" || !allLookedUp || reviewItems.every((i) => !i.per100g)}
+                      disabled={phaseIsLogging || !allLookedUp || reviewItems.every((i) => !i.per100g)}
                       className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-accent py-2.5 text-sm font-semibold text-background transition hover:bg-accent-dark disabled:opacity-50"
                     >
-                      {phase === "logging" ? (
+                      {phaseIsLogging ? (
                         <><Loader2 size={14} className="animate-spin" /> Logging…</>
                       ) : !allLookedUp ? (
                         <><Loader2 size={14} className="animate-spin" /> Looking up…</>

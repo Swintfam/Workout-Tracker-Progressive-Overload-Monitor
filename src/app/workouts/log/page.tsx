@@ -1,8 +1,10 @@
 "use client";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ExerciseSelectorPage } from "@/components/ExerciseSelectorPage";
+import { ExerciseDef, exerciseToDbGroup } from "@/lib/exercises";
 
 const SESSION_TYPES = ["Push", "Pull", "Legs", "Skill", "Cardio", "Mixed"] as const;
 
@@ -76,6 +78,7 @@ export default function LogWorkoutPage() {
   const [exercises, setExercises] = useState<ExerciseRow[]>([newExercise("Push")]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSelector, setShowSelector] = useState(false);
 
   function updateEx(id: number, patch: Partial<ExerciseRow>) {
     setExercises(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
@@ -182,8 +185,46 @@ export default function LogWorkoutPage() {
     }
   }
 
+  function handleSelectorConfirm(picks: ExerciseDef[]) {
+    if (!picks.length) { setShowSelector(false); return; }
+
+    const newRows = picks.map((ex) => {
+      const dbGroup = exerciseToDbGroup(ex);
+      return { ...newExercise(dbGroup), exercise: ex.name, muscle_group: dbGroup };
+    });
+
+    setExercises((prev) => {
+      const onlyEmpty = prev.length === 1 && !prev[0].exercise.trim();
+      return onlyEmpty ? newRows : [...prev, ...newRows];
+    });
+
+    // Auto-detect session type from selected exercises
+    const dbGroups = [...new Set(picks.map(exerciseToDbGroup))];
+    if (dbGroups.length === 1) {
+      const g = dbGroups[0];
+      if (g === "Skill")  { setSessionType("Skill");  }
+      else if (g === "Cardio") { setSessionType("Cardio"); }
+      else if (g === "Pull")   { setSessionType("Pull");   }
+      else if (g === "Push")   { setSessionType("Push");   }
+      else if (g === "Legs")   { setSessionType("Legs");   }
+      else                     { setSessionType("Mixed");  }
+    } else if (dbGroups.includes("Skill")) {
+      setSessionType("Skill");
+    } else {
+      setSessionType("Mixed");
+    }
+
+    setShowSelector(false);
+  }
+
   return (
     <div className="min-h-screen bg-background px-4 py-6 sm:px-8">
+      {showSelector && (
+        <ExerciseSelectorPage
+          onConfirm={handleSelectorConfirm}
+          onClose={() => setShowSelector(false)}
+        />
+      )}
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex items-center gap-3">
           <Link href="/workouts" className="rounded-xl p-2 text-muted transition hover:bg-surface-hover hover:text-foreground">
@@ -306,19 +347,19 @@ export default function LogWorkoutPage() {
                         <div>
                           <label className="mb-1 block text-xs font-medium text-orange-400">Start Weight (lb)</label>
                           <input type="number" value={ex.drop_start} onChange={e => updateEx(ex.id, { drop_start: e.target.value })}
-                            placeholder="330" min="0" step="5"
+                            placeholder="330" min="0" step="0.5"
                             className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-orange-400">Drop Per Stop (lb)</label>
                           <input type="number" value={ex.drop_per_stop} onChange={e => updateEx(ex.id, { drop_per_stop: e.target.value })}
-                            placeholder="30" min="1" step="5"
+                            placeholder="30" min="0.5" step="0.5"
                             className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-orange-400">End Weight (lb)</label>
                           <input type="number" value={ex.drop_end} onChange={e => updateEx(ex.id, { drop_end: e.target.value })}
-                            placeholder="50" min="0" step="5"
+                            placeholder="50" min="0" step="0.5"
                             className="w-full rounded-xl border border-orange-400 bg-orange-500/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                         <div>
@@ -416,10 +457,23 @@ export default function LogWorkoutPage() {
               );
             })}
             {exercises.length < 8 && (
-              <button type="button" onClick={() => setExercises(prev => [...prev, newExercise(SESSION_TO_MUSCLE[sessionType] ?? "Full Body")])}
-                className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-3 text-sm text-muted transition hover:border-accent/40 hover:text-accent">
-                <Plus size={16} /> Add Exercise
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSelector(true)}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-dashed border-accent/50 py-3 text-sm text-accent transition hover:bg-accent/5"
+                >
+                  <BookOpen size={16} /> Browse library
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExercises(prev => [...prev, newExercise(SESSION_TO_MUSCLE[sessionType] ?? "Full Body")])}
+                  aria-label="Add exercise manually"
+                  className="flex items-center justify-center rounded-2xl border border-dashed border-border px-4 py-3 text-muted transition hover:border-accent/40 hover:text-accent"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
             )}
           </div>
           {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}

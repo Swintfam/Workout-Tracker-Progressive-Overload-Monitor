@@ -9,6 +9,19 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Naeem's Dashboard",
   description: "Personal workout, nutrition, and life dashboard",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "FitDash",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+    icon: [
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png",   sizes: "192x192", type: "image/png" },
+    ],
+  },
 };
 
 // Inline script runs before paint to apply the saved theme
@@ -33,7 +46,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#F0C44D" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="font-sans antialiased">
