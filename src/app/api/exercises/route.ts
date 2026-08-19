@@ -19,9 +19,13 @@ export async function GET(req: NextRequest) {
   const limit     = searchParams.get("limit") ?? "50";
   const offset    = searchParams.get("offset") ?? "0";
 
+  const target = searchParams.get("target");
+
   let url: string;
   if (search) {
     url = `${BASE}/exercises/name/${encodeURIComponent(search)}?limit=${limit}&offset=${offset}`;
+  } else if (target) {
+    url = `${BASE}/exercises/target/${encodeURIComponent(target)}?limit=${limit}&offset=${offset}`;
   } else if (bodyPart) {
     url = `${BASE}/exercises/bodyPart/${encodeURIComponent(bodyPart)}?limit=${limit}&offset=${offset}`;
   } else if (equipment) {
