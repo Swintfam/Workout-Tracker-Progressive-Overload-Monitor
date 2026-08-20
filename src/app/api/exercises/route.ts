@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     const enriched = Array.isArray(data)
       ? data.map((ex: Record<string, unknown>) => ({
           ...ex,
-          gifUrl: ex.gifUrl || `https://v2.exercisedb.io/image/exercises/${ex.id}.gif`,
+          gifUrl: ex.gifUrl || `https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/${ex.id}/images/0.jpg`,
         }))
       : data;
     return NextResponse.json(enriched);
