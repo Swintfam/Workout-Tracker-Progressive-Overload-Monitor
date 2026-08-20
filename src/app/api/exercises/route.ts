@@ -41,7 +41,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: text }, { status: res.status });
     }
     const data = await res.json();
-    return NextResponse.json(data);
+    // Inject gifUrl from exercise ID if API didn't return it
+    const enriched = Array.isArray(data)
+      ? data.map((ex: Record<string, unknown>) => ({
+          ...ex,
+          gifUrl: ex.gifUrl || `https://v2.exercisedb.io/image/exercises/${ex.id}.gif`,
+        }))
+      : data;
+    return NextResponse.json(enriched);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
