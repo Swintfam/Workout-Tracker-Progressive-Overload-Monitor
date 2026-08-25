@@ -6,9 +6,14 @@ import {
   EXERCISE_LIBRARY,
   ExerciseType,
   MuscleGroup,
-  MUSCLE_GROUP_DEFS,
+  MUSCLE_SECTIONS,
   getExercisesByMuscle,
 } from "@/lib/exercises";
+
+// Flatten MUSCLE_SECTIONS into a flat list for the tab row
+const MUSCLE_GROUP_DEFS = MUSCLE_SECTIONS.flatMap(s =>
+  s.muscles.map(m => ({ id: m as MuscleGroup, label: m as string }))
+);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,13 +25,15 @@ interface Props {
 // ─── Colours ──────────────────────────────────────────────────────────────────
 
 const TYPE_COLORS: Record<ExerciseType, { bg: string; ic: string }> = {
-  barbell:    { bg: "#185FA5", ic: "#B5D4F4" },
-  dumbbell:   { bg: "#185FA5", ic: "#B5D4F4" },
-  cable:      { bg: "#185FA5", ic: "#B5D4F4" },
-  bodyweight: { bg: "#0F6E56", ic: "#9FE1CB" },
-  machine:    { bg: "#5F5E5A", ic: "#D3D1C7" },
-  skill:      { bg: "#534AB7", ic: "#CECBF6" },
-  cardio:     { bg: "#993C1D", ic: "#F5C4B3" },
+  barbell:      { bg: "#185FA5", ic: "#B5D4F4" },
+  dumbbell:     { bg: "#185FA5", ic: "#B5D4F4" },
+  cable:        { bg: "#185FA5", ic: "#B5D4F4" },
+  bodyweight:   { bg: "#0F6E56", ic: "#9FE1CB" },
+  machine:      { bg: "#5F5E5A", ic: "#D3D1C7" },
+  skill:        { bg: "#534AB7", ic: "#CECBF6" },
+  cardio:       { bg: "#993C1D", ic: "#F5C4B3" },
+  kettlebell:   { bg: "#185FA5", ic: "#B5D4F4" },
+  "full body":  { bg: "#7C3AED", ic: "#DDD6FE" },
 };
 
 // ─── Body silhouette ──────────────────────────────────────────────────────────
@@ -37,16 +44,23 @@ function BodySilhouette({ muscle }: { muscle: MuscleGroup }) {
   const D   = 0.45; // dim opacity
 
   const isHL = (region: string): boolean => {
-    const map: Record<MuscleGroup, string[]> = {
-      chest:     ["chest"],
-      back:      ["back"],
-      shoulders: ["shoulders"],
-      biceps:    ["biceps"],
-      triceps:   ["triceps"],
-      legs:      ["legs"],
-      core:      ["abs"],
-      skill:     ["chest", "shoulders", "biceps", "abs", "legs"],
-      cardio:    ["legs", "abs"],
+    const map: Partial<Record<MuscleGroup, string[]>> = {
+      "Chest":      ["chest"],
+      "Lats":       ["back"],
+      "Upper Back": ["back"],
+      "Traps":      ["back"],
+      "Shoulders":  ["shoulders"],
+      "Biceps":     ["biceps"],
+      "Triceps":    ["triceps"],
+      "Quads":      ["legs"],
+      "Hamstrings": ["legs"],
+      "Glutes":     ["legs"],
+      "Calves":     ["legs"],
+      "Abs":        ["abs"],
+      "Obliques":   ["abs"],
+      "Lower Back": ["back"],
+      "Full Body":  ["chest", "shoulders", "biceps", "abs", "legs"],
+      "Cardio":     ["legs", "abs"],
     };
     return (map[muscle] ?? []).includes(region);
   };
@@ -55,7 +69,9 @@ function BodySilhouette({ muscle }: { muscle: MuscleGroup }) {
   const o = (r: string) => (isHL(r) ? 1   : D  );
 
   // Back view for back/triceps so the highlighted region makes anatomical sense
-  const backView = muscle === "back" || muscle === "triceps";
+  const backView = muscle === "Lats" || muscle === "Upper Back" || muscle === "Traps"
+    || muscle === "Triceps" || muscle === "Lower Back" || muscle === "Glutes"
+    || muscle === "Hamstrings";
 
   if (backView) {
     return (
@@ -294,6 +310,25 @@ function TypeIcon({ type, color }: { type: ExerciseType; color: string }) {
           <line x1="21" y1="30" x2="26" y2="37" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       );
+    case "kettlebell":
+      return (
+        <svg width="28" height="34" viewBox="0 0 28 34" fill="none">
+          <circle cx="14" cy="20" r="11" fill={c} />
+          <path d="M9 10 Q14 2 19 10" stroke={c} strokeWidth="3" strokeLinecap="round" fill="none" />
+          <circle cx="14" cy="20" r="5" fill="rgba(0,0,0,0.25)" />
+        </svg>
+      );
+    case "full body":
+    default:
+      return (
+        <svg width="26" height="38" viewBox="0 0 26 38" fill="none">
+          <circle cx="13" cy="5.5" r="4.5" fill={c} />
+          <line x1="13" y1="10" x2="13" y2="22" stroke={c} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="5"  y1="15" x2="21" y2="15" stroke={c} strokeWidth="2"   strokeLinecap="round" />
+          <line x1="13" y1="22" x2="7"  y2="33" stroke={c} strokeWidth="2"   strokeLinecap="round" />
+          <line x1="13" y1="22" x2="19" y2="33" stroke={c} strokeWidth="2"   strokeLinecap="round" />
+        </svg>
+      );
   }
 }
 
@@ -309,11 +344,9 @@ function ExerciseCard({
   onToggle: () => void;
 }) {
   const { bg, ic } = TYPE_COLORS[ex.type];
-  const isSkill   = ex.type === "skill"  || ex.muscles.includes("skill");
+  const isSkill   = ex.type === "skill";
   const isCardio  = ex.type === "cardio";
-  const displayMuscles = ex.muscles
-    .filter((m) => m !== "skill" && m !== "cardio")
-    .join(" · ");
+  const displayMuscles = ex.primaryMuscles.join(" · ") || ex.clickableSelections.join(" · ");
 
   return (
     <button
@@ -331,11 +364,7 @@ function ExerciseCard({
         className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
         aria-hidden="true"
       >
-        {ex.illustrationKey ? (
-          <CustomIllustration illustrationKey={ex.illustrationKey} color={ic} />
-        ) : (
-          <TypeIcon type={ex.type} color={ic} />
-        )}
+        <TypeIcon type={ex.type} color={ic} />
       </div>
 
       {/* Info */}
@@ -378,7 +407,7 @@ function ExerciseCard({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ExerciseSelectorPage({ onConfirm, onClose }: Props) {
-  const [activeMuscle, setActiveMuscle] = useState<MuscleGroup>("chest");
+  const [activeMuscle, setActiveMuscle] = useState<MuscleGroup>("Chest");
   const [selected, setSelected]         = useState<Set<string>>(new Set());
 
   const exercises = getExercisesByMuscle(activeMuscle);
@@ -397,7 +426,7 @@ export function ExerciseSelectorPage({ onConfirm, onClose }: Props) {
     onConfirm(picks);
   }
 
-  const activeLabel = MUSCLE_GROUP_DEFS.find((m) => m.id === activeMuscle)?.label ?? "";
+  const activeLabel = activeMuscle;
 
   return (
     <div
@@ -433,8 +462,8 @@ export function ExerciseSelectorPage({ onConfirm, onClose }: Props) {
         >
           {MUSCLE_GROUP_DEFS.map((mg) => {
             const isActive   = mg.id === activeMuscle;
-            const isSkillTab = mg.id === "skill";
-            const isCardioTab = mg.id === "cardio";
+            const isSkillTab = mg.id === "Full Body";
+            const isCardioTab = mg.id === "Cardio";
             const borderColor = isActive
               ? isSkillTab ? "#534AB7" : isCardioTab ? "#0F6E56" : "#EF4444"
               : "transparent";
