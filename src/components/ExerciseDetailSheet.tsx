@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { X, Play, Pause } from "lucide-react";
 import { ExerciseDef, MuscleGroup } from "../lib/exercises";
 import { resolveExerciseMedia, ResolvedMedia } from "../lib/exerciseMedia";
+import { ExerciseGLTFPlayer } from "./ExerciseGLTFPlayer";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type Tab    = "summary" | "history" | "howto";
@@ -209,13 +210,17 @@ function ExerciseVideoPlayer({
     setSpeed(next);
   }
 
+  const [videoFailed, setVideoFailed] = useState(false);
+  const showVideo = !!animationUrl && !videoFailed;
+  const showThumbnail = !showVideo && !!thumbnailUrl;
+
   return (
     <div className="relative w-full bg-surface-hover" style={{ aspectRatio: "16/9" }}>
-      {animationUrl ? (
+      {showVideo ? (
         <>
           <video
             ref={videoRef}
-            src={animationUrl}
+            src={animationUrl ?? undefined}
             poster={thumbnailUrl ?? undefined}
             loop={playback.loop}
             muted={playback.muted}
@@ -223,6 +228,7 @@ function ExerciseVideoPlayer({
             className="w-full h-full object-cover"
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
+            onError={() => setVideoFailed(true)}
           />
           {/* Speed + play/pause controls */}
           <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
@@ -252,10 +258,18 @@ function ExerciseVideoPlayer({
             </button>
           )}
         </>
+      ) : showThumbnail ? (
+        /* No animation yet (or it failed to load) but we have a real still image */
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={thumbnailUrl ?? undefined}
+          alt=""
+          className="w-full h-full object-cover"
+        />
       ) : (
-        /* SVG fallback — shown until a production asset is uploaded */
+        /* Nothing produced yet for this exercise */
         <div className="absolute inset-0 flex items-center justify-center">
-          <p className="text-xs text-muted">Animation coming soon</p>
+          <p className="text-xs text-muted">Image coming soon</p>
         </div>
       )}
     </div>
@@ -381,7 +395,17 @@ export default function ExerciseDetailSheet({ ex, onClose, onAdd }: Props) {
               <div className="bg-surface-hover">
                 <AnatomyMap frontHls={frontHls} backHls={backHls} />
               </div>
+            ) : media?.animationFormat === 'gltf' && media.animationUrl ? (
+              /* ── GLTF/Three.js anatomical animation ── */
+              <ExerciseGLTFPlayer
+                glbUrl={media.animationUrl}
+                exerciseId={ex.exercise_id}
+                activatedMuscles={ex.anatomicalHighlight}
+                cameraView={media.cameraView}
+                playback={media.playback}
+              />
             ) : (
+              /* ── Video fallback (mp4/webm) or "coming soon" placeholder ── */
               <ExerciseVideoPlayer
                 animationUrl={media?.animationUrl ?? null}
                 thumbnailUrl={media?.thumbnailUrl ?? null}

@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
 import { Check, X } from "lucide-react";
+import gifData from "@/lib/exerciseGifs.json";
+
+const GIF_MAP = gifData as Record<string, string>;
 import {
   ExerciseDef,
   EXERCISE_LIBRARY,
@@ -35,6 +38,141 @@ const TYPE_COLORS: Record<ExerciseType, { bg: string; ic: string }> = {
   kettlebell:   { bg: "#185FA5", ic: "#B5D4F4" },
   "full body":  { bg: "#7C3AED", ic: "#DDD6FE" },
 };
+
+// ─── MuscleWiki-style anatomical muscle map ────────────────────────────────────
+// Front + back SVG with organic bezier paths per muscle group.
+// Color: secondary → orange, primary → red + diagonal hatch lines.
+
+const _HL_KEY: Partial<Record<MuscleGroup, string>> = {
+  Chest: "chest", Lats: "lats", "Upper Back": "upper-back", Traps: "traps",
+  Shoulders: "shoulders", Biceps: "biceps", Triceps: "triceps",
+  Forearms: "forearms", Neck: "neck", Abs: "abs", Obliques: "obliques",
+  "Lower Back": "lower-back", Glutes: "glutes", Quads: "quads",
+  Hamstrings: "hamstrings", Calves: "calves",
+  Adductors: "adductors", Abductors: "abductors",
+};
+
+type MPath = { key: string; d: string };
+
+// viewBox "0 0 60 100" — bezier paths per muscle region
+const FRONT_PATHS: MPath[] = [
+  { key: "neck",      d: "M 26 12 Q 30 11 34 12 L 34 17 Q 30 18 26 17 Z" },
+  { key: "shoulders", d: "M 18 17 C 12 14 6 18 6 23 C 6 28 10 30 15 28 C 18 26 19 22 18 17 Z" },
+  { key: "shoulders", d: "M 42 17 C 48 14 54 18 54 23 C 54 28 50 30 45 28 C 42 26 41 22 42 17 Z" },
+  { key: "chest",     d: "M 16 19 C 21 17 28 17 30 18 L 30 29 C 26 31 19 30 16 27 C 15 24 15 21 16 19 Z" },
+  { key: "chest",     d: "M 44 19 C 39 17 32 17 30 18 L 30 29 C 34 31 41 30 44 27 C 45 24 45 21 44 19 Z" },
+  { key: "biceps",    d: "M 9 27 C 7 31 7 37 9 43 L 15 43 C 14 37 14 31 16 27 Z" },
+  { key: "biceps",    d: "M 51 27 C 53 31 53 37 51 43 L 45 43 C 46 37 46 31 44 27 Z" },
+  { key: "forearms",  d: "M 9 43 C 8 48 8 53 9 57 L 14 57 C 14 53 14 48 14 43 Z" },
+  { key: "forearms",  d: "M 51 43 C 52 48 52 53 51 57 L 46 57 C 46 53 46 48 46 43 Z" },
+  { key: "abs",       d: "M 23 29 Q 30 28 37 29 L 36 48 Q 30 49 24 48 Z" },
+  { key: "obliques",  d: "M 16 28 C 14 34 14 41 16 49 L 24 48 L 24 29 Z" },
+  { key: "obliques",  d: "M 44 28 C 46 34 46 41 44 49 L 36 48 L 36 29 Z" },
+  // Non-muscle hip filler so torso reads as one connected shape
+  { key: "_fill",     d: "M 16 48 Q 22 50 30 50 Q 38 50 44 48 L 43 57 Q 36 58 30 58 Q 24 58 17 57 Z" },
+  { key: "quads",     d: "M 17 57 C 15 63 15 70 17 77 L 26 77 C 25 70 25 63 26 57 Z" },
+  { key: "quads",     d: "M 43 57 C 45 63 45 70 43 77 L 34 77 C 35 70 35 63 34 57 Z" },
+  { key: "adductors", d: "M 26 57 C 26 63 25 70 25 77 L 30 79 C 30 72 30 65 29 57 Z" },
+  { key: "adductors", d: "M 34 57 C 34 63 35 70 35 77 L 30 79 C 30 72 30 65 31 57 Z" },
+  { key: "abductors", d: "M 14 58 C 12 63 12 70 14 77 L 17 77 C 16 70 15 63 17 57 Z" },
+  { key: "abductors", d: "M 46 58 C 48 63 48 70 46 77 L 43 77 C 44 70 45 63 43 57 Z" },
+  { key: "calves",    d: "M 17 78 C 16 84 16 89 17 95 L 24 95 C 24 89 24 84 24 78 Z" },
+  { key: "calves",    d: "M 43 78 C 44 84 44 89 43 95 L 36 95 C 36 89 36 84 36 78 Z" },
+];
+
+const BACK_PATHS: MPath[] = [
+  { key: "neck",       d: "M 26 12 Q 30 11 34 12 L 34 17 Q 30 18 26 17 Z" },
+  { key: "traps",      d: "M 24 12 Q 30 10 36 12 Q 44 17 45 22 Q 40 25 30 24 Q 20 25 15 22 Q 16 17 24 12 Z" },
+  { key: "shoulders",  d: "M 18 17 C 12 14 6 18 6 23 C 6 28 10 30 15 28 C 18 26 19 22 18 17 Z" },
+  { key: "shoulders",  d: "M 42 17 C 48 14 54 18 54 23 C 54 28 50 30 45 28 C 42 26 41 22 42 17 Z" },
+  { key: "triceps",    d: "M 9 23 C 7 28 7 36 9 43 L 15 43 C 14 36 14 28 16 23 Z" },
+  { key: "triceps",    d: "M 51 23 C 53 28 53 36 51 43 L 45 43 C 46 36 46 28 44 23 Z" },
+  { key: "forearms",   d: "M 9 43 C 8 48 8 53 9 57 L 14 57 C 14 53 14 48 14 43 Z" },
+  { key: "forearms",   d: "M 51 43 C 52 48 52 53 51 57 L 46 57 C 46 53 46 48 46 43 Z" },
+  { key: "upper-back", d: "M 22 22 Q 30 21 38 22 L 37 36 Q 30 37 23 36 Z" },
+  { key: "lats",       d: "M 22 23 C 17 28 15 36 17 43 C 19 47 22 49 23 50 L 23 37 Q 20 30 22 23 Z" },
+  { key: "lats",       d: "M 38 23 C 43 28 45 36 43 43 C 41 47 38 49 37 50 L 37 37 Q 40 30 38 23 Z" },
+  { key: "lower-back", d: "M 23 36 Q 30 35 37 36 L 37 50 Q 30 51 23 50 Z" },
+  { key: "glutes",     d: "M 17 51 C 15 55 15 62 18 65 Q 23 67 28 65 Q 30 64 32 65 Q 37 67 42 65 C 45 62 45 55 43 51 Q 36 49 30 49 Q 24 49 17 51 Z" },
+  { key: "hamstrings", d: "M 17 65 C 15 70 15 77 17 83 L 26 83 C 25 77 25 70 26 65 Z" },
+  { key: "hamstrings", d: "M 43 65 C 45 70 45 77 43 83 L 34 83 C 35 77 35 70 34 65 Z" },
+  { key: "calves",     d: "M 17 83 C 15 88 15 92 17 96 L 25 96 C 24 92 24 88 24 83 Z" },
+  { key: "calves",     d: "M 43 83 C 45 88 45 92 43 96 L 35 96 C 36 92 36 88 36 83 Z" },
+];
+
+const _RED   = "#EF4444";
+const _ORNG  = "#F97316";
+const _GRAY  = "#6B7280";
+const _FGRAY = "#4B5563";
+
+function MiniAnatomyFigs({
+  primaryMuscles,
+  secondaryMuscles,
+}: {
+  primaryMuscles: MuscleGroup[];
+  secondaryMuscles: MuscleGroup[];
+}) {
+  const primArr = [...primaryMuscles];
+  const secArr  = [...secondaryMuscles];
+
+  const isFullBody = primArr.includes("Full Body" as MuscleGroup)
+    || primArr.includes("Cardio" as MuscleGroup);
+  if (isFullBody) {
+    // Push all MuscleGroup keys (title-case) so the lookup in _HL_KEY works
+    (Object.keys(_HL_KEY) as MuscleGroup[]).forEach(k => primArr.push(k));
+  }
+
+  const primKeys = new Set(primArr.map(m => _HL_KEY[m]).filter(Boolean) as string[]);
+  const secKeys  = new Set(
+    secArr.map(m => _HL_KEY[m]).filter(Boolean).filter(k => !primKeys.has(k!)) as string[]
+  );
+
+  const fill    = (key: string) =>
+    key === "_fill" ? _FGRAY
+    : primKeys.has(key) ? _RED
+    : secKeys.has(key)  ? _ORNG
+    : _GRAY;
+
+  const opacity = (key: string) =>
+    key === "_fill" ? 0.12
+    : primKeys.has(key) || secKeys.has(key) ? 1
+    : 0.18;
+
+  const showHatch = (key: string) => primKeys.has(key);
+
+  const renderPaths = (paths: MPath[], hatchId: string) =>
+    paths.map((p, i) => (
+      <g key={i}>
+        <path d={p.d} fill={fill(p.key)} opacity={opacity(p.key)} />
+        {showHatch(p.key) && (
+          <path d={p.d} fill={`url(#${hatchId})`} opacity={0.5} />
+        )}
+      </g>
+    ));
+
+  return (
+    <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+      <svg viewBox="0 0 60 100" width={50} height={83} fill="none" aria-hidden="true">
+        <defs>
+          <pattern id="hatch-f" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="4" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" />
+          </pattern>
+        </defs>
+        <circle cx="30" cy="7" r="5.5" fill={_GRAY} opacity={0.3} />
+        {renderPaths(FRONT_PATHS, "hatch-f")}
+      </svg>
+      <svg viewBox="0 0 60 100" width={50} height={83} fill="none" aria-hidden="true">
+        <defs>
+          <pattern id="hatch-b" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="4" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" />
+          </pattern>
+        </defs>
+        <circle cx="30" cy="7" r="5.5" fill={_GRAY} opacity={0.3} />
+        {renderPaths(BACK_PATHS, "hatch-b")}
+      </svg>
+    </div>
+  );
+}
 
 // ─── Body silhouette ──────────────────────────────────────────────────────────
 
@@ -338,10 +476,12 @@ function ExerciseCard({
   ex,
   selected,
   onToggle,
+  gifUrl,
 }: {
   ex: ExerciseDef;
   selected: boolean;
   onToggle: () => void;
+  gifUrl?: string;
 }) {
   const { bg, ic } = TYPE_COLORS[ex.type];
   const isSkill   = ex.type === "skill";
@@ -360,11 +500,21 @@ function ExerciseCard({
     >
       {/* Illustration */}
       <div
-        style={{ backgroundColor: bg }}
+        style={{ backgroundColor: gifUrl ? "transparent" : bg }}
         className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
         aria-hidden="true"
       >
-        <TypeIcon type={ex.type} color={ic} />
+        {gifUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={gifUrl}
+            alt=""
+            className="w-full h-full object-cover rounded-xl"
+            loading="lazy"
+          />
+        ) : (
+          <TypeIcon type={ex.type} color={ic} />
+        )}
       </div>
 
       {/* Info */}
@@ -409,7 +559,6 @@ function ExerciseCard({
 export function ExerciseSelectorPage({ onConfirm, onClose }: Props) {
   const [activeMuscle, setActiveMuscle] = useState<MuscleGroup>("Chest");
   const [selected, setSelected]         = useState<Set<string>>(new Set());
-
   const exercises = getExercisesByMuscle(activeMuscle);
   const count     = selected.size;
 
@@ -427,6 +576,15 @@ export function ExerciseSelectorPage({ onConfirm, onClose }: Props) {
   }
 
   const activeLabel = activeMuscle;
+
+  // Compute cumulative muscle coverage of selected exercises
+  const selectedExercises = EXERCISE_LIBRARY.filter(ex => selected.has(ex.name));
+  const allPrimary = new Set(selectedExercises.flatMap(ex => ex.primaryMuscles));
+  const allSecondary = new Set(
+    selectedExercises.flatMap(ex => ex.secondaryMuscles).filter(m => !allPrimary.has(m))
+  );
+  const mapPrimary   = [...allPrimary]   as MuscleGroup[];
+  const mapSecondary = [...allSecondary] as MuscleGroup[];
 
   return (
     <div
@@ -497,25 +655,57 @@ export function ExerciseSelectorPage({ onConfirm, onClose }: Props) {
         </div>
       </div>
 
-      {/* ── Exercise list ── */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-4 pt-3 pb-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {activeLabel}{" "}
-            <span className="font-normal normal-case tracking-normal text-muted/60">
-              · {exercises.length} exercises
-            </span>
-          </p>
+      {/* ── Exercise list + muscle map panel ── */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Exercise list */}
+        <div className="flex-1 overflow-y-auto min-w-0">
+          <div className="px-4 pt-3 pb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              {activeLabel}{" "}
+              <span className="font-normal normal-case tracking-normal text-muted/60">
+                · {exercises.length} exercises
+              </span>
+            </p>
+          </div>
+          <div className="px-4 pb-4 flex flex-col gap-2">
+            {exercises.map((ex) => (
+              <ExerciseCard
+                key={ex.name}
+                ex={ex}
+                selected={selected.has(ex.name)}
+                onToggle={() => toggleExercise(ex.name)}
+                gifUrl={GIF_MAP[ex.exercise_id]}
+              />
+            ))}
+          </div>
         </div>
-        <div className="px-4 pb-4 flex flex-col gap-2">
-          {exercises.map((ex) => (
-            <ExerciseCard
-              key={ex.name}
-              ex={ex}
-              selected={selected.has(ex.name)}
-              onToggle={() => toggleExercise(ex.name)}
-            />
-          ))}
+
+        {/* Muscle map panel */}
+        <div
+          className="shrink-0 border-l border-border bg-surface flex flex-col items-center py-4 px-2 gap-3"
+          style={{ width: 116 }}
+        >
+          <p className="text-[9px] font-semibold uppercase tracking-widest text-muted leading-none">
+            Muscles
+          </p>
+          <MiniAnatomyFigs
+            primaryMuscles={mapPrimary}
+            secondaryMuscles={mapSecondary}
+          />
+          {/* Legend */}
+          <div className="flex flex-col gap-1 w-full px-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{
+                background: "#EF4444",
+                backgroundImage: "repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,0.55) 2px,rgba(255,255,255,0.55) 3.5px)"
+              }} />
+              <span className="text-[9px] text-muted leading-none">Primary</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm shrink-0 bg-orange-500" />
+              <span className="text-[9px] text-muted leading-none">Secondary</span>
+            </div>
+          </div>
         </div>
       </div>
 

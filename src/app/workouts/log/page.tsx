@@ -1,9 +1,10 @@
 "use client";
 import { ArrowLeft, ChevronDown, ChevronUp, Dumbbell, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ExercisePicker, { ExerciseResult } from "@/components/ExercisePicker";
+import MuscleMapPanel from "@/components/MuscleMapPanel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Unit = "lb" | "kg";
@@ -83,6 +84,24 @@ export default function LogWorkoutPage() {
     const id = setInterval(() => setElapsed(Math.floor((Date.now() - startRef.current) / 1000)), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Muscle map — union of all logged exercises
+  const mapPrimary = useMemo(() => {
+    const seen = new Set<string>();
+    exercises.forEach(e => { if (e.ex.target) seen.add(e.ex.target); });
+    return [...seen];
+  }, [exercises]);
+
+  const mapSecondary = useMemo(() => {
+    const prim = new Set(mapPrimary.map(m => m.toLowerCase()));
+    const seen = new Set<string>();
+    exercises.forEach(e => {
+      e.ex.secondaryMuscles.forEach(m => {
+        if (!prim.has(m.toLowerCase())) seen.add(m);
+      });
+    });
+    return [...seen];
+  }, [exercises, mapPrimary]);
 
   // Stats
   const totalSets = exercises.reduce((acc, e) =>
@@ -256,11 +275,11 @@ export default function LogWorkoutPage() {
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       {showPicker && <ExercisePicker onAdd={handleAdd} onClose={() => setShowPicker(false)} />}
 
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
+      <div className="shrink-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex items-center justify-between px-4 py-3 max-w-2xl mx-auto">
           <Link href="/workouts" className="p-2 rounded-xl text-muted hover:bg-surface-hover hover:text-foreground transition">
             <ArrowLeft size={18} />
@@ -295,7 +314,10 @@ export default function LogWorkoutPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-3">
+      {/* Body — exercise list + muscle panel */}
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "none", paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-3">
         {/* Empty state */}
         {exercises.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -577,7 +599,13 @@ export default function LogWorkoutPage() {
             {error}
           </div>
         )}
-      </div>
+        </div>{/* max-w-2xl */}
+        </div>{/* scroll container */}
+
+        {/* Muscle map panel — right side, collapses to 28px */}
+        <MuscleMapPanel primary={mapPrimary} secondary={mapSecondary} />
+
+      </div>{/* flex row body */}
     </div>
   );
 }

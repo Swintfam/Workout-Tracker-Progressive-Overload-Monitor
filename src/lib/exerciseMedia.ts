@@ -9,6 +9,7 @@
  */
 
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { detectAnimationFormat, type AnimationFormat } from './exerciseGLTF';
 
 const STORAGE_BUCKET = 'exercise-assets';
 
@@ -22,6 +23,7 @@ export interface ExerciseMediaRecord {
   animation_path: string | null;
   asset_status: AssetStatus;
   demo_type: string;
+  camera_view: string | null;
   playback: {
     autoplay: boolean;
     loop: boolean;
@@ -33,8 +35,10 @@ export interface ExerciseMediaRecord {
 }
 
 export interface ResolvedMedia {
-  thumbnailUrl: string | null;   // null = no asset yet, show SVG fallback
-  animationUrl: string | null;   // null = no asset yet
+  thumbnailUrl: string | null;          // null = no asset yet, show fallback
+  animationUrl: string | null;          // null = no asset yet
+  animationFormat: AnimationFormat;     // 'gltf' | 'video' | null
+  cameraView: string;                   // e.g. 'rear-three-quarter'
   assetStatus: AssetStatus;
   playback: ExerciseMediaRecord['playback'];
 }
@@ -100,7 +104,7 @@ export async function resolveExerciseMedia(
     const supabase = getSupabaseBrowser();
     const { data, error } = await supabase
       .from('exercises')
-      .select('exercise_id, thumbnail_path, animation_path, asset_status, demo_type, playback')
+      .select('exercise_id, thumbnail_path, animation_path, asset_status, demo_type, camera_view, playback')
       .eq('exercise_id', exercise_id)
       .single();
 
@@ -108,6 +112,8 @@ export async function resolveExerciseMedia(
       const fallback: ResolvedMedia = {
         thumbnailUrl: null,
         animationUrl: null,
+        animationFormat: null,
+        cameraView: 'front-three-quarter',
         assetStatus: 'Not started',
         playback: DEFAULT_PLAYBACK,
       };
@@ -117,12 +123,16 @@ export async function resolveExerciseMedia(
 
     const record = data as ExerciseMediaRecord;
     const isReady = record.asset_status === 'Complete';
+    const animationPath = isReady ? record.animation_path : null;
+    const animationUrl  = storagePathToUrl(animationPath);
 
     const resolved: ResolvedMedia = {
-      thumbnailUrl: isReady ? storagePathToUrl(record.thumbnail_path) : null,
-      animationUrl: isReady ? storagePathToUrl(record.animation_path) : null,
-      assetStatus: record.asset_status,
-      playback: record.playback ?? DEFAULT_PLAYBACK,
+      thumbnailUrl:    isReady ? storagePathToUrl(record.thumbnail_path) : null,
+      animationUrl,
+      animationFormat: detectAnimationFormat(animationPath),
+      cameraView:      record.camera_view ?? 'front-three-quarter',
+      assetStatus:     record.asset_status,
+      playback:        record.playback ?? DEFAULT_PLAYBACK,
     };
 
     cacheSet(exercise_id, resolved);
@@ -131,6 +141,8 @@ export async function resolveExerciseMedia(
     const fallback: ResolvedMedia = {
       thumbnailUrl: null,
       animationUrl: null,
+      animationFormat: null,
+      cameraView: 'front-three-quarter',
       assetStatus: 'Not started',
       playback: DEFAULT_PLAYBACK,
     };

@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  Brain,
   CalendarDays,
   Dumbbell,
   LayoutDashboard,
   LogOut,
+  PersonStanding,
   Plus,
   Salad,
   Settings,
@@ -23,14 +23,14 @@ const navItems = [
   { label: "Calendar", icon: CalendarDays, href: "/calendar", soon: false },
   { label: "Nutrition", icon: Salad, href: "/nutrition", soon: false },
   { label: "Goals", icon: Target, href: "/goals", soon: false },
-  { label: "Mental Health", icon: Brain, href: "/mental-health", soon: false },
+  { label: "Body", icon: PersonStanding, href: "/body", soon: false },
 ];
 
 const bottomTabs = [
   { label: "Home", icon: LayoutDashboard, href: "/" },
   { label: "Workouts", icon: Dumbbell, href: "/workouts" },
   { label: "Nutrition", icon: Salad, href: "/nutrition" },
-  { label: "Mind", icon: Brain, href: "/mental-health" },
+  { label: "Body", icon: PersonStanding, href: "/body" },
 ];
 
 export default function Sidebar() {

@@ -3,6 +3,9 @@ import { useMemo, useState } from "react";
 import { Eye, Search, X } from "lucide-react";
 import { EXERCISE_LIBRARY, ExerciseDef, MuscleGroup } from "../lib/exercises";
 import ExerciseDetailSheet from "./ExerciseDetailSheet";
+// Apache 2.0 — vulovix/body-muscles
+import { FRONT_MUSCLES, BACK_MUSCLES } from "body-muscles";
+import { muscleToIds, preferredView } from "@/lib/muscleIds";
 
 // ── ExerciseResult kept for log-page compatibility ─────────────────────────────
 export interface ExerciseResult {
@@ -90,114 +93,44 @@ const MUSCLE_PICKER_SECTIONS = [
 
 type MuscleOpt = { label: MuscleGroup; hl: string; view: "front" | "back" };
 
-// ── Body SVG ────────────────────────────────────────────────────────────────────
-function BodySVG({ hl, view }: { hl: string; view: "front" | "back" }) {
-  const B = "#3B82F6";
-  const G = "#4B5563";
-  const hi = (...parts: string[]) => (parts.includes(hl) || hl === "full-body") ? B : G;
-  const hiBody = hl === "full-body";
+// ── Anatomical muscle thumbnail (body-muscles paths) ───────────────────────────
+const RED  = "#EF4444";
+const ORNG = "#F97316";
+const DIM  = "rgba(255,255,255,0.06)";
 
-  if (view === "front") {
-    return (
-      <svg viewBox="0 0 50 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Head */}
-        <circle cx="25" cy="6" r="5" fill={G} />
-        {/* Neck */}
-        <rect x="22" y="10" width="6" height="4" rx="1" fill={hi("neck")} />
-        {/* Shoulders (left + right + bar) */}
-        <rect x="10" y="14" width="7" height="5" rx="2.5" fill={hi("shoulders")} />
-        <rect x="33" y="14" width="7" height="5" rx="2.5" fill={hi("shoulders")} />
-        <rect x="17" y="14" width="16" height="5" rx="1" fill={hi("shoulders")} />
-        {/* Upper arms (biceps) */}
-        <rect x="10" y="19" width="7" height="12" rx="3.5" fill={hi("biceps")} />
-        <rect x="33" y="19" width="7" height="12" rx="3.5" fill={hi("biceps")} />
-        {/* Chest */}
-        <rect x="17" y="19" width="16" height="10" rx="2" fill={hi("chest")} />
-        {/* Forearms */}
-        <rect x="10" y="32" width="6" height="10" rx="3" fill={hi("forearms")} />
-        <rect x="34" y="32" width="6" height="10" rx="3" fill={hi("forearms")} />
-        {/* Abs */}
-        <rect x="20" y="29" width="10" height="12" rx="2" fill={hi("abs")} />
-        {/* Obliques */}
-        <rect x="16" y="30" width="4"  height="10" rx="2" fill={hi("obliques")} />
-        <rect x="30" y="30" width="4"  height="10" rx="2" fill={hi("obliques")} />
-        {/* Hip */}
-        <rect x="16" y="41" width="18" height="4" rx="2" fill={hiBody ? B : G} />
-        {/* Adductors (inner thigh) */}
-        <rect x="21" y="45" width="4"  height="14" rx="2" fill={hi("adductors")} />
-        <rect x="25" y="45" width="4"  height="14" rx="2" fill={hi("adductors")} />
-        {/* Quads (outer) */}
-        <rect x="16" y="45" width="5"  height="14" rx="2.5" fill={hi("quads")} />
-        <rect x="29" y="45" width="5"  height="14" rx="2.5" fill={hi("quads")} />
-        {/* Abductors (outer hip) */}
-        <rect x="13" y="43" width="3"  height="8"  rx="1.5" fill={hi("abductors")} />
-        <rect x="34" y="43" width="3"  height="8"  rx="1.5" fill={hi("abductors")} />
-        {/* Calves (front lower leg) */}
-        <rect x="16" y="60" width="8"  height="13" rx="3" fill={hi("calves")} />
-        <rect x="26" y="60" width="8"  height="13" rx="3" fill={hi("calves")} />
-      </svg>
-    );
-  }
+function MiniMuscleThumb({
+  primaryMuscles,
+  secondaryMuscles,
+  isFullBody = false,
+}: {
+  primaryMuscles: string[];
+  secondaryMuscles: string[];
+  isFullBody?: boolean;
+}) {
+  const pk = useMemo(() => {
+    if (isFullBody) return new Set([...FRONT_MUSCLES, ...BACK_MUSCLES].map(m => m.id));
+    return muscleToIds(primaryMuscles);
+  }, [primaryMuscles, isFullBody]);
 
-  // ── Back view ────────────────────────────────────────────────────────────────
+  const sk = useMemo(() => {
+    if (isFullBody) return new Set<string>();
+    const s = muscleToIds(secondaryMuscles);
+    pk.forEach(id => s.delete(id));
+    return s;
+  }, [secondaryMuscles, pk, isFullBody]);
+
+  const view  = isFullBody ? "front" : preferredView(pk);
+  const paths = view === "front" ? FRONT_MUSCLES : BACK_MUSCLES;
+  const vb    = view === "front" ? "0 0 35 93" : "37 0 35 93";
+
+  const fillOf = (id: string) => pk.has(id) ? RED : sk.has(id) ? ORNG : DIM;
+  const opOf   = (id: string) => pk.has(id) || sk.has(id) ? 1 : 0.6;
+
   return (
-    <svg viewBox="0 0 50 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Head */}
-      <circle cx="25" cy="6" r="5" fill={G} />
-      {/* Traps */}
-      <path d="M17 11 Q25 9 33 11 L33 19 Q25 16 17 19 Z" fill={hi("traps")} />
-      {/* Triceps */}
-      <rect x="10" y="14" width="7" height="13" rx="3.5" fill={hi("triceps")} />
-      <rect x="33" y="14" width="7" height="13" rx="3.5" fill={hi("triceps")} />
-      {/* Upper back */}
-      <rect x="17" y="19" width="16" height="8" rx="2" fill={hi("upper-back")} />
-      {/* Lats */}
-      <path d="M13 21 L17 21 L17 30 L12 27 Z" fill={hi("lats")} />
-      <path d="M37 21 L33 21 L33 30 L38 27 Z" fill={hi("lats")} />
-      {/* Lower back */}
-      <rect x="17" y="27" width="16" height="12" rx="2" fill={hi("lower-back")} />
-      {/* Forearms */}
-      <rect x="10" y="28" width="6" height="10" rx="3" fill={hi("forearms")} />
-      <rect x="34" y="28" width="6" height="10" rx="3" fill={hi("forearms")} />
-      {/* Glutes */}
-      <rect x="17" y="39" width="16" height="8" rx="3" fill={hi("glutes")} />
-      {/* Hamstrings */}
-      <rect x="17" y="47" width="8"  height="13" rx="2.5" fill={hi("hamstrings")} />
-      <rect x="25" y="47" width="8"  height="13" rx="2.5" fill={hi("hamstrings")} />
-      {/* Calves */}
-      <rect x="17" y="61" width="8"  height="12" rx="3" fill={hi("calves")} />
-      <rect x="25" y="61" width="8"  height="12" rx="3" fill={hi("calves")} />
-    </svg>
-  );
-}
-
-// ── Cardio / Full Body icon ─────────────────────────────────────────────────────
-function CardioSVG() {
-  return (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M20 32 C20 32 6 22 6 13 C6 9 9 6 13 6 C16 6 18.5 8 20 10 C21.5 8 24 6 27 6 C31 6 34 9 34 13 C34 22 20 32 20 32Z" fill="#3B82F6" />
-    </svg>
-  );
-}
-
-function FullBodySVG() {
-  const B = "#3B82F6";
-  const G = "#4B5563";
-  return (
-    <svg viewBox="0 0 50 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="25" cy="6" r="5" fill={B} />
-      <rect x="22" y="10" width="6" height="4" rx="1" fill={B} />
-      <rect x="10" y="14" width="30" height="5" rx="2.5" fill={B} />
-      <rect x="10" y="19" width="7" height="12" rx="3.5" fill={B} />
-      <rect x="33" y="19" width="7" height="12" rx="3.5" fill={B} />
-      <rect x="17" y="19" width="16" height="22" rx="2" fill={B} />
-      <rect x="10" y="32" width="6" height="10" rx="3" fill={B} />
-      <rect x="34" y="32" width="6" height="10" rx="3" fill={B} />
-      <rect x="16" y="41" width="18" height="4" rx="2" fill={B} />
-      <rect x="16" y="45" width="7"  height="14" rx="2.5" fill={B} />
-      <rect x="27" y="45" width="7"  height="14" rx="2.5" fill={B} />
-      <rect x="16" y="60" width="8"  height="13" rx="3" fill={B} />
-      <rect x="26" y="60" width="8"  height="13" rx="3" fill={B} />
+    <svg viewBox={vb} width={21} height={56} fill="none" aria-hidden="true">
+      {paths.map(m => (
+        <path key={m.id} d={m.path} fill={fillOf(m.id)} opacity={opOf(m.id)} />
+      ))}
     </svg>
   );
 }
@@ -394,6 +327,29 @@ export default function ExercisePicker({ onAdd, onClose }: Props) {
 
   const hasFilter = selEquip || selMuscle;
 
+  // Preview counts shown inside the sheets (pending selection, not yet applied)
+  const musclePreviewCount = useMemo(() => {
+    let r = EXERCISE_LIBRARY;
+    if (query.trim().length > 1) {
+      const q = query.trim().toLowerCase();
+      r = r.filter(e => e.name.toLowerCase().includes(q));
+    }
+    if (selEquip) r = r.filter(e => e.type === selEquip.apiVal);
+    if (pendingMuscle) r = r.filter(e => e.clickableSelections.includes(pendingMuscle.label));
+    return r.length;
+  }, [query, selEquip, pendingMuscle]);
+
+  const equipPreviewCount = useMemo(() => {
+    let r = EXERCISE_LIBRARY;
+    if (query.trim().length > 1) {
+      const q = query.trim().toLowerCase();
+      r = r.filter(e => e.name.toLowerCase().includes(q));
+    }
+    if (selMuscle) r = r.filter(e => e.clickableSelections.includes(selMuscle.label));
+    if (pendingEquip) r = r.filter(e => e.type === pendingEquip.apiVal);
+    return r.length;
+  }, [query, selMuscle, pendingEquip]);
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background" style={{ height: "100dvh" }}>
 
@@ -475,60 +431,54 @@ export default function ExercisePicker({ onAdd, onClose }: Props) {
 
       {/* Exercise list */}
       <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
-        {exercises.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-2">
-            <span className="text-3xl">🏋️</span>
-            <p className="text-sm text-muted">No exercises found</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {exercises.map(def => (
-              <div key={def.name} className="flex items-center gap-3 px-4 py-3">
-                {/* Tap row to add exercise */}
-                <button
-                  onClick={() => onAdd(toResult(def))}
-                  className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                >
-                  {/* Thumbnail */}
-                  <div className="w-14 h-14 rounded-xl bg-surface-hover flex-shrink-0 overflow-hidden border border-border flex items-center justify-center">
-                    {def.clickableSelections.includes("Full Body") ? (
-                      <div className="w-10 h-10"><FullBodySVG /></div>
-                    ) : def.clickableSelections.includes("Cardio") ? (
-                      <div className="w-8 h-8"><CardioSVG /></div>
-                    ) : def.anatomicalHighlight.length > 0 ? (
-                      <div className="w-10 h-10">
-                        <BodySVG
-                          hl={hlKeyForMuscle(def.anatomicalHighlight[0])}
-                          view={viewForMuscle(def.anatomicalHighlight[0])}
-                        />
-                      </div>
-                    ) : (
-                      <div className="text-muted text-lg">💪</div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{def.name}</p>
-                    <p className="text-xs text-muted capitalize mt-0.5">
-                      {def.primaryMuscles.length > 0
-                        ? def.primaryMuscles.join(", ")
-                        : def.clickableSelections.join(", ")}
-                    </p>
-                    <p className="text-xs text-muted/60 capitalize">{def.type}</p>
-                  </div>
-                </button>
-                {/* Eye icon → detail sheet */}
-                <button
-                  onClick={() => setDetailEx(def)}
-                  className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-hover transition flex-shrink-0"
-                  aria-label={`Info for ${def.name}`}
-                >
-                  <Eye size={18} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+          {exercises.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-2">
+              <span className="text-3xl">🏋️</span>
+              <p className="text-sm text-muted">No exercises found</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {exercises.map(def => (
+                <div key={def.name} className="flex items-center gap-3 px-4 py-3">
+                  {/* Tap row to add exercise */}
+                  <button
+                    onClick={() => onAdd(toResult(def))}
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                  >
+                    {/* Thumbnail — anatomical muscle map */}
+                    <div className="w-14 h-14 rounded-xl bg-surface-hover flex-shrink-0 overflow-hidden border border-border flex items-center justify-center">
+                      <MiniMuscleThumb
+                        primaryMuscles={def.primaryMuscles as string[]}
+                        secondaryMuscles={def.secondaryMuscles as string[]}
+                        isFullBody={
+                          def.clickableSelections.includes("Full Body") ||
+                          def.clickableSelections.includes("Cardio")
+                        }
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{def.name}</p>
+                      <p className="text-xs text-muted capitalize mt-0.5">
+                        {def.primaryMuscles.length > 0
+                          ? def.primaryMuscles.join(", ")
+                          : def.clickableSelections.join(", ")}
+                      </p>
+                      <p className="text-xs text-muted/60 capitalize">{def.type}</p>
+                    </div>
+                  </button>
+                  {/* Eye icon → detail sheet */}
+                  <button
+                    onClick={() => setDetailEx(def)}
+                    className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-hover transition flex-shrink-0"
+                    aria-label={`Info for ${def.name}`}
+                  >
+                    <Eye size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
       {/* Equipment Sheet */}
       <BottomSheet
@@ -537,7 +487,7 @@ export default function ExercisePicker({ onAdd, onClose }: Props) {
         title="Equipment"
         onClear={clearAll}
         onApply={applyEquip}
-        resultCount={exercises.length}
+        resultCount={equipPreviewCount}
       >
         <div className="grid grid-cols-2 gap-3">
           {EQUIPMENT_OPTS.map(opt => {
@@ -578,7 +528,7 @@ export default function ExercisePicker({ onAdd, onClose }: Props) {
         title="Muscle Group"
         onClear={clearAll}
         onApply={applyMuscle}
-        resultCount={exercises.length}
+        resultCount={musclePreviewCount}
       >
         {MUSCLE_PICKER_SECTIONS.map(section => (
           <div key={section.title} className="mb-5">
@@ -597,15 +547,11 @@ export default function ExercisePicker({ onAdd, onClose }: Props) {
                     }`}
                   >
                     <div className={`w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden ${active ? "bg-accent/10" : "bg-surface-hover"}`}>
-                      {m.hl === "full-body" ? (
-                        <div className="w-8 h-8"><FullBodySVG /></div>
-                      ) : m.hl === "cardio" ? (
-                        <div className="w-7 h-7"><CardioSVG /></div>
-                      ) : (
-                        <div className="w-9 h-9">
-                          <BodySVG hl={m.hl} view={m.view} />
-                        </div>
-                      )}
+                      <MiniMuscleThumb
+                        primaryMuscles={[m.label as string]}
+                        secondaryMuscles={[]}
+                        isFullBody={m.hl === "full-body" || m.hl === "cardio"}
+                      />
                     </div>
                     <span className={`text-sm font-medium leading-tight ${active ? "text-accent" : "text-foreground"}`}>
                       {m.label}
