@@ -1,0 +1,4 @@
+exercise_id,exercise_name,reason
+advanced-tuck-back-lever,"Advanced Tuck Back Lever","Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-.... You can find your API key at https://platform.openai.com/account/api-keys.'; 'type': 'invalid_request_error'; 'code': 'invalid_api_key'; 'param': None}; 'status': 401}"
+advanced-tuck-front-lever,"Advanced Tuck Front Lever","Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-.... You can find your API key at https://platform.openai.com/account/api-keys.'; 'type': 'invalid_request_error'; 'code': 'invalid_api_key'; 'param': None}; 'status': 401}"
+advanced-tuck-planche,"Advanced Tuck Planche","Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-.... You can find your API key at https://platform.openai.com/account/api-keys.'; 'type': 'invalid_request_error'; 'code': 'invalid_api_key'; 'param': None}; 'status': 401}"

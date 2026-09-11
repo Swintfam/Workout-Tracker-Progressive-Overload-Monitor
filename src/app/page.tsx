@@ -5,12 +5,14 @@ import Sidebar from "@/components/Sidebar";
 import StatCard from "@/components/StatCard";
 import WeeklyVolumeChart from "@/components/WeeklyVolumeChart";
 import MoodWeekStrip from "@/components/MoodWeekStrip";
+import BodyMapWidget from "@/components/BodyMapWidget";
 import {
   getWeeklyRepTotals,
   getWeeklySessionCount,
   getWeeklyVolumeByDay,
   getLastSession,
   getNextPlannedSession,
+  getLastSessionMuscles,
 } from "@/lib/workouts";
 import { getWeekMood } from "@/lib/mental";
 import { getUserTargets } from "@/lib/targets";
@@ -24,7 +26,7 @@ export default async function DashboardPage() {
   });
   const todayStr = new Date().toISOString().split("T")[0];
 
-  const [repTotals, sessionCount, volumeByDay, lastSession, weekMood, nextSession, userTargets, todayMacros, nutritionTargets] = await Promise.all([
+  const [repTotals, sessionCount, volumeByDay, lastSession, weekMood, nextSession, userTargets, todayMacros, nutritionTargets, lastSessionMuscles] = await Promise.all([
     getWeeklyRepTotals(),
     getWeeklySessionCount(),
     getWeeklyVolumeByDay(),
@@ -34,6 +36,7 @@ export default async function DashboardPage() {
     getUserTargets(),
     getDailyTotals(todayStr),
     getNutritionTargets(),
+    getLastSessionMuscles(),
   ]);
 
   const dailyReq = nutritionTargets ? getDailyRequirement(nutritionTargets) : null;
@@ -119,7 +122,10 @@ export default async function DashboardPage() {
           <div className="lg:col-span-2">
             <WeeklyVolumeChart data={volumeByDay} />
           </div>
-          <NextSessionPanel lastSession={lastSession} nextSession={nextSession} />
+          <div className="flex flex-col gap-4">
+            <BodyMapWidget muscles={lastSessionMuscles.muscles} lastDate={lastSessionMuscles.date} />
+            <NextSessionPanel lastSession={lastSession} nextSession={nextSession} />
+          </div>
         </section>
         <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">

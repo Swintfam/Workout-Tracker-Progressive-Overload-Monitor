@@ -1,4 +1,5 @@
 import { getDbClient, getEffectiveUserId } from "@/lib/supabase/admin";
+import { EXERCISE_LIBRARY } from "@/lib/exercises";
 
 export const REP_TARGETS = {
   Abs: 2500,
@@ -217,6 +218,45 @@ export async function getLastSession() {
 
   return data ?? [];
 }
+/**
+ * Returns the primary muscles trained in the most recent workout session.
+ * Used to populate the home-page body map widget.
+ */
+export async function getLastSessionMuscles(): Promise<{ date: string; muscles: string[] }> {
+  const admin = getDbClient();
+  const userId = await getEffectiveUserId();
+
+  // Get the date of the last session first
+  const { data: latest } = await admin
+    .from("workout_sessions")
+    .select("date")
+    .eq("user_id", userId)
+    .order("date", { ascending: false })
+    .limit(1);
+
+  if (!latest?.length) return { date: "", muscles: [] };
+  const lastDate = latest[0].date;
+
+  // Get all exercises from that date
+  const { data } = await admin
+    .from("workout_sessions")
+    .select("exercise")
+    .eq("user_id", userId)
+    .eq("date", lastDate);
+
+  if (!data?.length) return { date: lastDate, muscles: [] };
+
+  // Build exercise → primaryMuscles lookup
+  const exMap = new Map(EXERCISE_LIBRARY.map(e => [e.name, e.primaryMuscles as string[]]));
+
+  const muscles = new Set<string>();
+  data.forEach(row => {
+    (exMap.get(row.exercise) ?? []).forEach(m => muscles.add(m));
+  });
+
+  return { date: lastDate, muscles: [...muscles] };
+}
+
 export async function getNextPlannedSession() {
   const admin = getDbClient();
   const userId = await getEffectiveUserId();

@@ -4,12 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { FRONT_MUSCLES, BACK_MUSCLES } from "body-muscles";
-import { ID_TO_MUSCLE } from "@/lib/muscleIds";
 import { EXERCISE_LIBRARY, type MuscleGroup } from "@/lib/exercises";
 import Sidebar from "@/components/Sidebar";
+import AnatomyFigure, { type MuscleStatus } from "@/components/AnatomyFigure";
 
-// Ordered list shown in the muscle list below the figure
 const MUSCLE_LIST: MuscleGroup[] = [
   "Chest", "Shoulders", "Biceps", "Triceps", "Forearms",
   "Abs", "Obliques", "Lower Back",
@@ -17,8 +15,6 @@ const MUSCLE_LIST: MuscleGroup[] = [
   "Glutes", "Quads", "Hamstrings", "Adductors", "Abductors", "Calves",
   "Neck",
 ];
-
-type DotStatus = "trained" | "rested" | "none";
 
 function toYMD(d: Date): string {
   return d.toISOString().split("T")[0];
@@ -29,10 +25,8 @@ export default function BodyPage() {
   const today     = toYMD(new Date());
   const yesterday = toYMD(new Date(Date.now() - 86_400_000));
 
-  // muscle (lowercase) → most-recent YYYY-MM-DD trained
   const [lastTrained, setLastTrained] = useState<Record<string, string>>({});
 
-  // Build exercise-name → primaryMuscles lookup (done once)
   const exToMuscles = useMemo(() => {
     const map: Record<string, string[]> = {};
     EXERCISE_LIBRARY.forEach(e => { map[e.name] = e.primaryMuscles as string[]; });
@@ -57,31 +51,22 @@ export default function BodyPage() {
       .catch(() => {});
   }, [exToMuscles, today]);
 
-  function statusFor(muscle: string): DotStatus {
+  function statusFor(muscle: string): MuscleStatus {
     const date = lastTrained[muscle.toLowerCase()];
     if (!date) return "none";
     if (date === today || date === yesterday) return "trained";
     return "rested";
   }
 
-  function fillFor(muscleId: string): string {
-    const muscle = ID_TO_MUSCLE[muscleId];
-    if (!muscle) return "rgba(255,255,255,0.06)";
-    const s = statusFor(muscle);
-    if (s === "trained") return "#EF4444";
-    if (s === "rested")  return "#22c55e";
-    return "rgba(255,255,255,0.08)";
-  }
+  // Build Record<muscle, MuscleStatus> for AnatomyFigure
+  const muscleStatus = Object.fromEntries(
+    MUSCLE_LIST.map(m => [m, statusFor(m)])
+  ) as Record<string, MuscleStatus>;
 
-  function dotColor(status: DotStatus): string {
+  function dotColor(status: MuscleStatus): string {
     if (status === "trained") return "bg-red-500";
     if (status === "rested")  return "bg-green-500";
     return "bg-white/20";
-  }
-
-  function handlePathClick(id: string) {
-    const muscle = ID_TO_MUSCLE[id];
-    if (muscle) router.push(`/body/${encodeURIComponent(muscle)}`);
   }
 
   return (
@@ -89,7 +74,6 @@ export default function BodyPage() {
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto pb-24 lg:pb-6">
-        {/* Header */}
         <header className="px-4 lg:px-8 pt-4 lg:pt-6 pb-3">
           <h1 className="text-2xl font-semibold">Body</h1>
         </header>
@@ -107,51 +91,12 @@ export default function BodyPage() {
             </div>
           </div>
 
-          {/* Anatomy figure — both views side by side, tappable */}
-          <div className="flex justify-center gap-4 py-2 rounded-2xl border border-border bg-surface mb-4">
-            {/* Front */}
-            <svg
-              viewBox="0 0 35 93"
-              className="w-[42%] max-w-[180px]"
-              style={{ height: "auto" }}
-              fill="none"
-              aria-label="Front muscle map"
-            >
-              {FRONT_MUSCLES.map(m => (
-                <path
-                  key={m.id}
-                  d={m.path}
-                  fill={fillFor(m.id)}
-                  onClick={() => handlePathClick(m.id)}
-                  style={{
-                    cursor: ID_TO_MUSCLE[m.id] ? "pointer" : "default",
-                    transition: "fill 0.15s",
-                  }}
-                />
-              ))}
-            </svg>
-
-            {/* Back */}
-            <svg
-              viewBox="37 0 35 93"
-              className="w-[42%] max-w-[180px]"
-              style={{ height: "auto" }}
-              fill="none"
-              aria-label="Back muscle map"
-            >
-              {BACK_MUSCLES.map(m => (
-                <path
-                  key={m.id}
-                  d={m.path}
-                  fill={fillFor(m.id)}
-                  onClick={() => handlePathClick(m.id)}
-                  style={{
-                    cursor: ID_TO_MUSCLE[m.id] ? "pointer" : "default",
-                    transition: "fill 0.15s",
-                  }}
-                />
-              ))}
-            </svg>
+          {/* Anatomy figure */}
+          <div className="rounded-2xl border border-border bg-white mb-4 overflow-hidden">
+            <AnatomyFigure
+              muscleStatus={muscleStatus}
+              onMuscleClick={muscle => router.push(`/body/${encodeURIComponent(muscle)}`)}
+            />
           </div>
 
           {/* Muscle group list */}
