@@ -14,6 +14,7 @@ import {
 } from "@/lib/workouts";
 import { getWeekMood } from "@/lib/mental";
 import { getUserTargets } from "@/lib/targets";
+import { getDailyTotals, getNutritionTargets, getDailyRequirement } from "@/lib/nutrition";
 
 export default async function DashboardPage() {
   const today = new Date().toLocaleDateString("en-US", {
@@ -23,7 +24,7 @@ export default async function DashboardPage() {
   });
   const todayStr = new Date().toISOString().split("T")[0];
 
-  const [repTotals, sessionCount, volumeByDay, lastSession, weekMood, nextSession, userTargets] = await Promise.all([
+  const [repTotals, sessionCount, volumeByDay, lastSession, weekMood, nextSession, userTargets, todayMacros, nutritionTargets] = await Promise.all([
     getWeeklyRepTotals(),
     getWeeklySessionCount(),
     getWeeklyVolumeByDay(),
@@ -31,21 +32,35 @@ export default async function DashboardPage() {
     getWeekMood(),
     getNextPlannedSession(),
     getUserTargets(),
+    getDailyTotals(todayStr),
+    getNutritionTargets(),
   ]);
+
+  const dailyReq = nutritionTargets ? getDailyRequirement(nutritionTargets) : null;
+  const calGoal = dailyReq?.calories ?? 0;
+  const proteinGoal = dailyReq?.protein_g ?? 0;
 
   const totalWeeklyVolume = volumeByDay.reduce((sum, d) => sum + d.volume, 0);
 
   const stats = [
     {
       label: "Today's Calories",
-      value: "—",
-      sublabel: "Log a meal to see this",
+      value: todayMacros.calories > 0 ? Math.round(todayMacros.calories).toLocaleString() : "—",
+      sublabel: todayMacros.calories > 0
+        ? calGoal > 0
+          ? `${Math.round(calGoal - todayMacros.calories).toLocaleString()} kcal remaining`
+          : `${Math.round(todayMacros.calories).toLocaleString()} kcal logged`
+        : "Log a meal to see this",
       icon: Flame,
     },
     {
       label: "Today's Protein",
-      value: "—",
-      sublabel: "Log a meal to see this",
+      value: todayMacros.protein_g > 0 ? `${Math.round(todayMacros.protein_g)}g` : "—",
+      sublabel: todayMacros.protein_g > 0
+        ? proteinGoal > 0
+          ? `Goal: ${Math.round(proteinGoal)}g`
+          : `${Math.round(todayMacros.protein_g)}g logged`
+        : "Log a meal to see this",
       icon: Beef,
     },
     {
