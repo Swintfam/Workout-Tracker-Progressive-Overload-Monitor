@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import AnatomyFigure, { type MuscleStatus } from "@/components/AnatomyFigure";
-import { muscleToIds } from "@/lib/muscleIds";
 
 interface Props {
   muscles: string[];
