@@ -478,7 +478,7 @@ export default function LogWorkoutPage() {
                             </div>
                           </div>
                           <button
-                            onClick={() => completeSet(e.uid, activeSet.id)}
+                            onPointerDown={(ev) => { ev.preventDefault(); completeSet(e.uid, activeSet.id); }}
                             className="w-full py-3.5 rounded-xl bg-accent text-background text-sm font-semibold transition hover:bg-accent-dark active:scale-[0.98]"
                           >
                             ✓ Complete set
@@ -486,13 +486,15 @@ export default function LogWorkoutPage() {
                         </div>
                       )}
 
-                      {/* Add set manually */}
-                      <button
-                        onClick={() => update(e.uid, { sets: [...e.sets, newSet(e.sets.at(-1)?.weight, e.sets.at(-1)?.reps)] })}
-                        className="w-full py-3 text-sm text-muted hover:text-foreground border-t border-border/40 transition"
-                      >
-                        + Add set
-                      </button>
+                      {/* Add set — only show when all current sets are completed */}
+                      {!activeSet && (
+                        <button
+                          onPointerDown={(ev) => { ev.preventDefault(); update(e.uid, { sets: [...e.sets, newSet(e.sets.at(-1)?.weight, e.sets.at(-1)?.reps)] }); }}
+                          className="w-full py-3 text-sm text-muted hover:text-foreground border-t border-border/40 transition"
+                        >
+                          + Add set
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -602,8 +604,10 @@ export default function LogWorkoutPage() {
         </div>{/* max-w-2xl */}
         </div>{/* scroll container */}
 
-        {/* Muscle map panel — right side, collapses to 28px */}
-        <MuscleMapPanel primary={mapPrimary} secondary={mapSecondary} />
+        {/* Muscle map panel — desktop only (takes too much width on mobile) */}
+        <div className="hidden lg:flex">
+          <MuscleMapPanel primary={mapPrimary} secondary={mapSecondary} />
+        </div>
 
       </div>{/* flex row body */}
     </div>
