@@ -168,9 +168,7 @@ export default function LogWorkoutPage() {
     setExercises(prev => prev.map(e => {
       if (e.uid !== uid) return e;
       const sets = e.sets.map(s => s.id === sid ? { ...s, completed: true } : s);
-      // Add a new blank set after completing if this was the last one
-      const allDone = sets.every(s => s.completed);
-      return { ...e, sets: allDone ? [...sets, newSet(sets[sets.length - 1]?.weight, sets[sets.length - 1]?.reps)] : sets };
+      return { ...e, sets };
     }));
   }
 
