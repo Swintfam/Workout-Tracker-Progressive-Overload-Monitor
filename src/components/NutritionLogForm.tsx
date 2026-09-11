@@ -119,6 +119,7 @@ export default function NutritionLogForm({ date, isOpen, initialSlot, onClose }:
   const [usdaResults, setUsdaResults] = useState<UsdaFood[]>([]);
   const [searching, setSearching] = useState(false);
   const [usdaGrams, setUsdaGrams] = useState<Record<number, number>>({});
+  const [usdaServings, setUsdaServings] = useState<Record<number, number>>({});
   const [usdaLoading, setUsdaLoading] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -153,6 +154,13 @@ export default function NutritionLogForm({ date, isOpen, initialSlot, onClose }:
           }
           return next;
         });
+        setUsdaServings((prev) => {
+          const next = { ...prev };
+          for (const f of foods) {
+            if (!(f.fdcId in next)) next[f.fdcId] = 1;
+          }
+          return next;
+        });
       } catch { setUsdaResults([]); }
       finally { setSearching(false); }
     }, 400);
@@ -161,7 +169,7 @@ export default function NutritionLogForm({ date, isOpen, initialSlot, onClose }:
   function reset() {
     setTab("photo"); setPhase("upload"); setPreviewUrl(null);
     setAnalysisNotes(null); setReviewItems([]); setError(null);
-    setQuery(""); setUsdaResults([]); setUsdaGrams({});
+    setQuery(""); setUsdaResults([]); setUsdaGrams({}); setUsdaServings({});
     setCName(""); setCCal(""); setCP(""); setCC(""); setCF(""); setCFib(""); setCSug("");
   }
 
@@ -274,6 +282,15 @@ export default function NutritionLogForm({ date, isOpen, initialSlot, onClose }:
       setError(e instanceof Error ? e.message : "Failed to log items");
       setPhase("reviewing");
     }
+  }
+
+  // ── USDA search: update servings count + derive grams ──
+  function changeServings(food: UsdaFood, delta: number) {
+    const perServing = food.defaultServing > 0 ? food.defaultServing : 100;
+    const current = usdaServings[food.fdcId] ?? 1;
+    const next = Math.max(0.5, Math.round((current + delta) * 2) / 2); // 0.5 steps
+    setUsdaServings(p => ({ ...p, [food.fdcId]: next }));
+    setUsdaGrams(p => ({ ...p, [food.fdcId]: Math.round(next * perServing * 10) / 10 }));
   }
 
   // ── USDA search: log single food ──
@@ -591,14 +608,27 @@ export default function NutritionLogForm({ date, isOpen, initialSlot, onClose }:
                             </button>
                           </div>
                         </div>
+                        {/* Serving stepper */}
                         <div className="mt-2 flex items-center gap-2">
-                          <input
-                            type="number" min="1" step="5"
-                            value={g}
-                            onChange={(e) => setUsdaGrams((p) => ({ ...p, [food.fdcId]: parseFloat(e.target.value) || 100 }))}
-                            className="w-16 rounded-lg border border-border bg-background px-2 py-0.5 text-center text-xs outline-none focus:border-accent"
-                          />
-                          <span className="text-[11px] text-muted">g serving</span>
+                          <div className="flex items-center rounded-xl border border-border overflow-hidden">
+                            <button
+                              onPointerDown={(e) => { e.preventDefault(); changeServings(food, -0.5); }}
+                              className="w-9 h-8 flex items-center justify-center text-base font-bold text-muted hover:text-foreground bg-surface-hover transition active:bg-border"
+                            >−</button>
+                            <span className="w-10 text-center text-sm font-semibold">
+                              {usdaServings[food.fdcId] ?? 1}
+                            </span>
+                            <button
+                              onPointerDown={(e) => { e.preventDefault(); changeServings(food, 0.5); }}
+                              className="w-9 h-8 flex items-center justify-center text-base font-bold text-muted hover:text-foreground bg-surface-hover transition active:bg-border"
+                            >+</button>
+                          </div>
+                          <span className="text-[11px] text-muted">
+                            {food.servingUnit || "serving"}
+                            {food.defaultServing > 0 && (
+                              <span className="text-muted/50"> · {g}g</span>
+                            )}
+                          </span>
                         </div>
                       </div>
                     );
