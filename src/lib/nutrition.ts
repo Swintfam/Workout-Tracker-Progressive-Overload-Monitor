@@ -242,15 +242,21 @@ export interface DayAdherence {
   logged: boolean;
 }
 
-/** Adherence for every day in the current week (Mon–Sun). */
-export async function getWeeklyAdherence(weekStart?: string): Promise<DayAdherence[]> {
+/** Adherence for every day in the current week (Mon–Sun).
+ *  Pass `prefetchedTargets` to avoid a redundant DB round-trip when the
+ *  caller already has the targets (e.g. from Promise.all in the page). */
+export async function getWeeklyAdherence(
+  weekStart?: string,
+  prefetchedTargets?: NutritionTargets | null,
+): Promise<DayAdherence[]> {
   const db = getDbClient();
   const userId = await getEffectiveUserId();
 
   const ws = weekStart ?? getWeekStart();
   const we = getWeekEnd(ws);
 
-  const targets = await getNutritionTargets();
+  // Use caller-supplied targets when available to avoid a second DB call
+  const targets = prefetchedTargets !== undefined ? prefetchedTargets : await getNutritionTargets();
   const dailyReq = targets ? getDailyRequirement(targets) : null;
 
   const { data } = await db

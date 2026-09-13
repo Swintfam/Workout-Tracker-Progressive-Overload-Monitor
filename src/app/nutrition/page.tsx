@@ -24,12 +24,15 @@ export default async function NutritionPage({
   const activeDate = searchParams.date ?? today;
   const weekStart = getWeekStart();
 
-  const [targets, logs, totals, foods, adherence] = await Promise.all([
-    getNutritionTargets(),
+  // Fetch targets first so we can pass them into getWeeklyAdherence,
+  // avoiding a duplicate getEffectiveUserId/cookie call inside it.
+  const targets = await getNutritionTargets();
+
+  const [logs, totals, foods, adherence] = await Promise.all([
     getDailyLogs(activeDate),
     getDailyTotals(activeDate),
     getFoodLibrary(),
-    getWeeklyAdherence(weekStart),
+    getWeeklyAdherence(weekStart, targets),
   ]);
 
   const dailyReq = targets ? getDailyRequirement(targets) : null;
