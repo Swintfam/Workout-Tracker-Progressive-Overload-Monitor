@@ -27,17 +27,23 @@ export default async function DashboardPage() {
   });
   const todayStr = localDateYMD();
 
+  // Wrap each call so one failing query returns a safe default instead of
+  // crashing the whole page. If the session token is stale the middleware
+  // will have already refreshed it, but this is a belt-and-suspenders guard.
+  const safe = <T,>(p: Promise<T>, fallback: T): Promise<T> =>
+    p.catch(() => fallback);
+
   const [repTotals, sessionCount, volumeByDay, lastSession, weekMood, nextSession, userTargets, todayMacros, nutritionTargets, lastSessionMuscles] = await Promise.all([
-    getWeeklyRepTotals(),
-    getWeeklySessionCount(),
-    getWeeklyVolumeByDay(),
-    getLastSession(),
-    getWeekMood(),
-    getNextPlannedSession(),
-    getUserTargets(),
-    getDailyTotals(todayStr),
-    getNutritionTargets(),
-    getLastSessionMuscles(),
+    safe(getWeeklyRepTotals(), { Abs: 0, Pull: 0, Push: 0, Legs: 0 }),
+    safe(getWeeklySessionCount(), 0),
+    safe(getWeeklyVolumeByDay(), []),
+    safe(getLastSession(), []),
+    safe(getWeekMood(), []),
+    safe(getNextPlannedSession(), null),
+    safe(getUserTargets(), null),
+    safe(getDailyTotals(todayStr), { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }),
+    safe(getNutritionTargets(), null),
+    safe(getLastSessionMuscles(), { date: "", muscles: [] }),
   ]);
 
   const dailyReq = nutritionTargets ? getDailyRequirement(nutritionTargets) : null;
