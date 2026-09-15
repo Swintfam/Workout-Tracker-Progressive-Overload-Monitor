@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 // Apache 2.0 — vulovix/body-muscles
 import { FRONT_MUSCLES, BACK_MUSCLES } from "body-muscles";
@@ -17,7 +17,11 @@ interface Props {
 }
 
 export default function MuscleMapPanel({ primary, secondary }: Props) {
-  const [open, setOpen] = useState(true);
+  // Start collapsed on mobile (< 1024px), open on desktop
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    setOpen(window.innerWidth >= 1024);
+  }, []);
 
   const pk = useMemo(() => muscleToIds(primary), [primary]);
   const sk = useMemo(() => {

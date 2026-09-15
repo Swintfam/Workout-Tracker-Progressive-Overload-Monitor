@@ -603,10 +603,8 @@ export default function LogWorkoutPage() {
         </div>{/* max-w-2xl */}
         </div>{/* scroll container */}
 
-        {/* Muscle map panel — desktop only (takes too much width on mobile) */}
-        <div className="hidden lg:flex">
-          <MuscleMapPanel primary={mapPrimary} secondary={mapSecondary} />
-        </div>
+        {/* Muscle map panel — visible on all screen sizes, starts collapsed on mobile */}
+        <MuscleMapPanel primary={mapPrimary} secondary={mapSecondary} />
 
       </div>{/* flex row body */}
     </div>
