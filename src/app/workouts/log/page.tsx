@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ExercisePicker, { ExerciseResult } from "@/components/ExercisePicker";
 import MuscleMapPanel from "@/components/MuscleMapPanel";
+import { localDateYMD } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Unit = "lb" | "kg";
@@ -258,7 +259,7 @@ export default function LogWorkoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_type: sessionType,
-          date: new Date().toISOString().split("T")[0],
+          date: localDateYMD(), // local date — avoids UTC offset logging to wrong day
           duration_min: Math.round(elapsed / 60) || null,
           exercises: payload,
         }),

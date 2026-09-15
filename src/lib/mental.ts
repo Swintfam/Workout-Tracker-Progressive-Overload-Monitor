@@ -1,5 +1,6 @@
 import { getDbClient, getEffectiveUserId } from "@/lib/supabase/admin";
 import { getWeekStart, getWeekEnd } from "@/lib/workouts";
+import { localDateYMD } from "@/lib/utils";
 
 // Re-export client-safe types and constants from the shared file
 export { MOOD_COLORS } from "@/lib/mood-colors";
@@ -74,7 +75,7 @@ export async function getWeekMood(weekStart?: string): Promise<WeekMoodDay[]> {
   for (let i = 0; i < 7; i++) {
     const d = new Date(ws + "T00:00:00");
     d.setDate(d.getDate() + i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = localDateYMD(d);
     result.push({
       date: dateStr,
       rating: byDate[dateStr]?.rating ?? null,
@@ -93,7 +94,7 @@ export async function getMoodTrend(weeksBack = 8): Promise<MoodTrendPoint[]> {
   const currentWeekStart = getWeekStart();
   const earliest = new Date(currentWeekStart + "T00:00:00");
   earliest.setDate(earliest.getDate() - 7 * (weeksBack - 1));
-  const earliestStr = earliest.toISOString().split("T")[0];
+  const earliestStr = localDateYMD(earliest);
 
   const { data } = await db
     .from("mood_logs")
@@ -113,7 +114,7 @@ export async function getMoodTrend(weeksBack = 8): Promise<MoodTrendPoint[]> {
   for (let i = weeksBack - 1; i >= 0; i--) {
     const d = new Date(currentWeekStart + "T00:00:00");
     d.setDate(d.getDate() - 7 * i);
-    const ws = d.toISOString().split("T")[0];
+    const ws = localDateYMD(d);
     const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     const ratings = byWeek[ws];
     const avg = ratings?.length

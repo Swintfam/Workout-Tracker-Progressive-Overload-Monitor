@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { localDateYMD } from "@/lib/utils";
 
 interface Props {
   activeDate: string; // YYYY-MM-DD
@@ -11,21 +12,20 @@ function formatLabel(dateStr: string, today: string): string {
   const d = new Date(dateStr + "T00:00:00");
   const label = d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
   if (dateStr === today) return `Today — ${label}`;
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (dateStr === yesterday.toISOString().split("T")[0]) return `Yesterday — ${label}`;
+  const yest = new Date(); yest.setDate(yest.getDate() - 1);
+  if (dateStr === localDateYMD(yest)) return `Yesterday — ${label}`;
   return label;
 }
 
 function addDays(dateStr: string, n: number): string {
-  const d = new Date(dateStr + "T00:00:00");
+  const d = new Date(dateStr + "T00:00:00"); // parse as local midnight
   d.setDate(d.getDate() + n);
-  return d.toISOString().split("T")[0];
+  return localDateYMD(d); // return local date, not UTC
 }
 
 export default function NutritionDateNav({ activeDate }: Props) {
   const router = useRouter();
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateYMD(); // local date — client already runs in local time
   const isFuture = addDays(activeDate, 1) > today;
 
   function go(days: number) {

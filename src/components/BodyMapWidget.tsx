@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AnatomyFigure, { type MuscleStatus } from "@/components/AnatomyFigure";
+import { localDateYMD } from "@/lib/utils";
 
 interface Props {
   muscles: string[];
@@ -10,8 +11,9 @@ interface Props {
 
 function dayLabel(dateStr: string): string {
   if (!dateStr) return "No sessions yet";
-  const today = new Date().toISOString().split("T")[0];
-  const yesterday = new Date(Date.now() - 86_400_000).toISOString().split("T")[0];
+  const today = localDateYMD();
+  const yest = new Date(); yest.setDate(yest.getDate() - 1);
+  const yesterday = localDateYMD(yest);
   if (dateStr === today) return "Today";
   if (dateStr === yesterday) return "Yesterday";
   const d = new Date(dateStr + "T00:00:00");

@@ -1,6 +1,7 @@
 import Sidebar from "@/components/Sidebar";
 import NutritionDateNav from "@/components/NutritionDateNav";
 import NutritionPageClient from "@/components/NutritionPageClient";
+import { localDateYMD } from "@/lib/utils";
 import {
   getNutritionTargets,
   getDailyLogs,
@@ -20,7 +21,7 @@ export default async function NutritionPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateYMD(); // local date — avoids UTC offset stamping food to wrong day
   const activeDate = searchParams.date ?? today;
   const weekStart = getWeekStart();
 

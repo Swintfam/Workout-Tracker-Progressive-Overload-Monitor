@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Dumbbell, Eye, EyeOff } from "lucide-react";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
 
@@ -15,6 +16,7 @@ export default function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +27,10 @@ export default function SignInForm() {
   async function handleEmailAuth(e: React.FormEvent) {
     e.preventDefault();
     if (!email || !password) { setError("Email and password are required."); return; }
+    if (mode === "signup" && !agreed) {
+      setError("Please agree to the Terms of Service and Privacy Policy to continue.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -52,6 +58,10 @@ export default function SignInForm() {
   }
 
   async function handleGoogle() {
+    if (mode === "signup" && !agreed) {
+      setError("Please agree to the Terms of Service and Privacy Policy to continue.");
+      return;
+    }
     setGoogleLoading(true);
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
@@ -126,6 +136,28 @@ export default function SignInForm() {
             </button>
           </div>
 
+          {mode === "signup" && (
+            <label className="flex items-start gap-2.5 text-[12px] leading-snug text-white/40">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 rounded border-white/20 bg-white/10 accent-white"
+              />
+              <span>
+                I agree to the{" "}
+                <Link href="/terms" target="_blank" className="text-white/60 underline underline-offset-2 hover:text-white">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" target="_blank" className="text-white/60 underline underline-offset-2 hover:text-white">
+                  Privacy Policy
+                </Link>
+                .
+              </span>
+            </label>
+          )}
+
           {error && (
             <p className="rounded-xl bg-red-500/10 px-3 py-2 text-[13px] text-red-400">{error}</p>
           )}
@@ -135,7 +167,7 @@ export default function SignInForm() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (mode === "signup" && !agreed)}
             className="w-full rounded-full bg-white/10 py-3 text-sm font-semibold text-white shadow transition hover:bg-white/20 disabled:opacity-50"
           >
             {loading ? "…" : mode === "signin" ? "Sign in" : "Create account"}
@@ -151,7 +183,7 @@ export default function SignInForm() {
         {/* Google */}
         <button
           onClick={handleGoogle}
-          disabled={googleLoading}
+          disabled={googleLoading || (mode === "signup" && !agreed)}
           className="flex w-full items-center justify-center gap-2.5 rounded-full px-5 py-3 text-sm font-medium text-white shadow transition disabled:opacity-50"
           style={{
             background: "linear-gradient(180deg, #232526 0%, #2d2e30 100%)",

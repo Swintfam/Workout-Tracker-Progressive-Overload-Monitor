@@ -1,5 +1,6 @@
 import { getDbClient, getEffectiveUserId } from "@/lib/supabase/admin";
 import { getWeekStart, getWeekEnd } from "@/lib/workouts";
+import { localDateYMD } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -281,7 +282,7 @@ export async function getWeeklyAdherence(
   for (let i = 0; i < 7; i++) {
     const d = new Date(ws + "T00:00:00");
     d.setDate(d.getDate() + i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = localDateYMD(d);
     const totals = byDate[dateStr] ?? { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
     const logged = totals.calories > 0 || totals.protein_g > 0;
     const met = logged && !!dailyReq &&

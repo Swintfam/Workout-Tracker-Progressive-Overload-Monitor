@@ -1,5 +1,6 @@
 import { getDbClient, getEffectiveUserId } from "@/lib/supabase/admin";
 import { EXERCISE_LIBRARY } from "@/lib/exercises";
+import { localDateYMD } from "@/lib/utils";
 
 export const REP_TARGETS = {
   Abs: 2500,
@@ -10,20 +11,20 @@ export const REP_TARGETS = {
 
 export type MuscleGroup = keyof typeof REP_TARGETS;
 
-/** Monday of the week containing `ref` (defaults to now), as YYYY-MM-DD. */
+/** Monday of the week containing `ref` (defaults to now), as YYYY-MM-DD (local time). */
 export function getWeekStart(ref: Date = new Date()): string {
-  const day = ref.getDay(); // 0=Sun
+  const day = ref.getDay(); // 0=Sun, local time
   const daysToMon = day === 0 ? 6 : day - 1;
   const mon = new Date(ref);
   mon.setDate(ref.getDate() - daysToMon);
-  return mon.toISOString().split("T")[0];
+  return localDateYMD(mon); // local date, not UTC
 }
 
-/** Sunday of the week starting at `weekStart` (YYYY-MM-DD), as YYYY-MM-DD. */
+/** Sunday of the week starting at `weekStart` (YYYY-MM-DD), as YYYY-MM-DD (local time). */
 export function getWeekEnd(weekStart: string): string {
-  const d = new Date(weekStart + "T00:00:00");
+  const d = new Date(weekStart + "T00:00:00"); // parse as local midnight
   d.setDate(d.getDate() + 6);
-  return d.toISOString().split("T")[0];
+  return localDateYMD(d); // local date, not UTC
 }
 
 export async function getWeeklyRepTotals(
@@ -130,7 +131,7 @@ export async function getVolumeTrend(
   const currentWeekStart = getWeekStart();
   const earliestStart = new Date(currentWeekStart + "T00:00:00");
   earliestStart.setDate(earliestStart.getDate() - 7 * (weeksBack - 1));
-  const earliestStartStr = earliestStart.toISOString().split("T")[0];
+  const earliestStartStr = localDateYMD(earliestStart);
 
   const { data } = await admin
     .from("workout_sessions")
@@ -149,7 +150,7 @@ export async function getVolumeTrend(
   for (let i = weeksBack - 1; i >= 0; i--) {
     const d = new Date(currentWeekStart + "T00:00:00");
     d.setDate(d.getDate() - 7 * i);
-    const ws = d.toISOString().split("T")[0];
+    const ws = localDateYMD(d);
     const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     weeks.push({ weekStart: ws, weekLabel: label, volume: byWeek[ws] ?? 0 });
   }

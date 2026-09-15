@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 /**
  * Supabase admin client — uses the service role key to bypass RLS.
@@ -51,8 +52,12 @@ export function getDbClient() {
  * Returns the authenticated user's ID.
  * - Local dev: returns DEV_USER_ID from .env.local
  * - Production: returns the ID from the active Supabase auth session
+ *
+ * Wrapped in React's cache() so concurrent server-function calls during a
+ * single render dedup to one auth.getUser() round-trip instead of several,
+ * preventing race conditions with concurrent cookie / session reads.
  */
-export async function getEffectiveUserId(): Promise<string> {
+export const getEffectiveUserId = cache(async (): Promise<string> => {
   if (process.env.NODE_ENV !== "production") {
     const devId = process.env.DEV_USER_ID;
     if (!devId) throw new Error("DEV_USER_ID not set in .env.local");
@@ -65,4 +70,4 @@ export async function getEffectiveUserId(): Promise<string> {
 
   if (!user) throw new Error("Not authenticated");
   return user.id;
-}
+});

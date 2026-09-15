@@ -17,6 +17,7 @@ import {
 import { getWeekMood } from "@/lib/mental";
 import { getUserTargets } from "@/lib/targets";
 import { getDailyTotals, getNutritionTargets, getDailyRequirement } from "@/lib/nutrition";
+import { localDateYMD } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const today = new Date().toLocaleDateString("en-US", {
@@ -24,7 +25,7 @@ export default async function DashboardPage() {
     month: "long",
     day: "numeric",
   });
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = localDateYMD();
 
   const [repTotals, sessionCount, volumeByDay, lastSession, weekMood, nextSession, userTargets, todayMacros, nutritionTargets, lastSessionMuscles] = await Promise.all([
     getWeeklyRepTotals(),

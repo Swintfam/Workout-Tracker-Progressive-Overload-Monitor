@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+// Debug-only route hitting an external API — must not be statically
+// prerendered at build time (that invokes it during `next build`).
+export const dynamic = "force-dynamic";
+
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY ?? "";
 const HEADERS = {
   "X-RapidAPI-Key": RAPIDAPI_KEY,
