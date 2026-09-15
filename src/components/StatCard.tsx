@@ -16,20 +16,20 @@ export default function StatCard({
   accent = false,
 }: StatCardProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted">{label}</span>
+    <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 lg:p-5">
+      <div className="flex items-start justify-between gap-1">
+        <span className="text-[11px] font-medium text-muted leading-tight">{label}</span>
         <div
-          className={`flex h-9 w-9 items-center justify-center rounded-xl ${
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg lg:h-9 lg:w-9 lg:rounded-xl ${
             accent ? "bg-accent text-background" : "bg-surface-hover text-muted"
           }`}
         >
-          <Icon size={18} />
+          <Icon size={16} />
         </div>
       </div>
       <div>
-        <p className="text-2xl font-semibold">{value}</p>
-        {sublabel && <p className="text-xs text-muted mt-1">{sublabel}</p>}
+        <p className="text-xl font-bold leading-none lg:text-2xl">{value}</p>
+        {sublabel && <p className="text-[10px] text-muted mt-1 leading-tight lg:text-xs">{sublabel}</p>}
       </div>
     </div>
   );

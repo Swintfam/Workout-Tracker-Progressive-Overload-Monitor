@@ -107,43 +107,65 @@ export default async function DashboardPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 px-8 py-6">
-        <header className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">Welcome back, {displayName}</h1>
-            <p className="text-sm text-muted">{today}</p>
+
+      {/* ── MAIN CONTENT ── mobile-first: full width, generous bottom padding for nav bar */}
+      <main className="flex-1 overflow-y-auto pb-28 lg:pb-8">
+
+        {/* ── HEADER ── */}
+        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/40 px-4 py-3 lg:static lg:bg-transparent lg:backdrop-blur-none lg:border-0 lg:px-8 lg:pt-6 lg:pb-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted uppercase tracking-wider">{today}</p>
+              <h1 className="text-xl font-bold leading-tight lg:text-2xl">
+                Hey, {displayName} 👋
+              </h1>
+            </div>
           </div>
         </header>
-        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <StatCard key={stat.label} {...stat} />
-          ))}
-        </section>
-        <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+
+        <div className="px-4 pt-4 lg:px-8 lg:pt-6 space-y-4">
+
+          {/* ── STAT CARDS — 2-col on mobile, 4-col on desktop ── */}
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+            {stats.map((stat) => (
+              <StatCard key={stat.label} {...stat} />
+            ))}
+          </section>
+
+          {/* ── BODY MAP + NEXT SESSION — side-by-side on desktop, stacked on mobile ── */}
+          <section className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
+            <div className="lg:col-span-1">
+              <BodyMapWidget muscles={lastSessionMuscles.muscles} lastDate={lastSessionMuscles.date} />
+            </div>
+            <div className="lg:col-span-2">
+              <NextSessionPanel lastSession={lastSession} nextSession={nextSession} />
+            </div>
+          </section>
+
+          {/* ── WEEKLY VOLUME CHART ── */}
+          <section>
             <WeeklyVolumeChart data={volumeByDay} />
-          </div>
-          <div className="flex flex-col gap-4">
-            <BodyMapWidget muscles={lastSessionMuscles.muscles} lastDate={lastSessionMuscles.date} />
-            <NextSessionPanel lastSession={lastSession} nextSession={nextSession} />
-          </div>
-        </section>
-        <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+          </section>
+
+          {/* ── WEEKLY PROGRESS BARS ── */}
+          <section>
             <ProgressBars goals={repGoals} />
-          </div>
-        </section>
-        <section>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Mental Health · This Week
-            </h2>
-            <a href="/mental-health" className="text-xs text-accent hover:underline">
-              Log today →
-            </a>
-          </div>
-          <MoodWeekStrip days={weekMood} today={todayStr} />
-        </section>
+          </section>
+
+          {/* ── MOOD STRIP ── */}
+          <section>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+                Mental Health · This Week
+              </h2>
+              <a href="/mental-health" className="text-xs text-accent hover:underline">
+                Log today →
+              </a>
+            </div>
+            <MoodWeekStrip days={weekMood} today={todayStr} />
+          </section>
+
+        </div>
       </main>
     </div>
   );
