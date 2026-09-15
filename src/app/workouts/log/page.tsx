@@ -7,6 +7,24 @@ import ExercisePicker, { ExerciseResult } from "@/components/ExercisePicker";
 import MuscleMapPanel from "@/components/MuscleMapPanel";
 import { localDateYMD } from "@/lib/utils";
 
+// ─── Muscle → DB category mapping ─────────────────────────────────────────────
+// DB constraint allows: 'Abs'|'Pull'|'Push'|'Legs'|'Full Body'|'Skill'|'Cardio'|'Mixed'
+const PUSH_MUSCLES  = new Set(["Chest", "Shoulders", "Triceps"]);
+const PULL_MUSCLES  = new Set(["Lats", "Upper Back", "Traps", "Biceps", "Forearms", "Rhomboids"]);
+const LEG_MUSCLES   = new Set(["Quads", "Hamstrings", "Glutes", "Calves", "Adductors", "Abductors"]);
+const CORE_MUSCLES  = new Set(["Abs", "Obliques", "Lower Back"]);
+
+function toDbCategory(ex: ExerciseResult): string {
+  const t = ex.target; // primaryMuscles[0]
+  if (PUSH_MUSCLES.has(t))  return "Push";
+  if (PULL_MUSCLES.has(t))  return "Pull";
+  if (LEG_MUSCLES.has(t))   return "Legs";
+  if (CORE_MUSCLES.has(t))  return "Abs";
+  if (ex.bodyPart === "Multiple") return "Full Body";
+  if (t === "Cardio")        return "Cardio";
+  return "Mixed";
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Unit = "lb" | "kg";
 
@@ -199,23 +217,15 @@ export default function LogWorkoutPage() {
       if (e.mode === "drop") {
         return e.drop.start && e.drop.dropPer && e.drop.end && e.drop.repsPerStop;
       }
-      return e.sets.some(s => s.completed && (s.weight || s.reps));
+      return e.sets.some(s => s.completed);
     });
     if (!valid.length) { setError("Complete at least one set before finishing."); return; }
     setSubmitting(true);
     setError(null);
 
-    // Detect session type from exercises
-    const bodyParts = [...new Set(valid.map(e => e.ex.bodyPart))];
-    let sessionType = "Mixed";
-    if (bodyParts.length === 1) {
-      const bp = bodyParts[0];
-      if (bp === "chest" || bp === "shoulders" || bp === "upper arms") sessionType = "Push";
-      else if (bp === "back" || bp === "upper arms") sessionType = "Pull";
-      else if (bp === "upper legs" || bp === "lower legs") sessionType = "Legs";
-      else if (bp === "waist") sessionType = "Abs";
-      else if (bp === "cardio") sessionType = "Cardio";
-    }
+    // Detect session type from exercises using DB-compatible categories
+    const categories = [...new Set(valid.map(e => toDbCategory(e.ex)))];
+    const sessionType = categories.length === 1 ? categories[0] : "Mixed";
 
     try {
       const payload = valid.map(e => {
@@ -231,7 +241,7 @@ export default function LogWorkoutPage() {
             inLb ? toLb(end) : end,
           );
           return {
-            exercise: e.ex.name, muscle_group: e.ex.bodyPart,
+            exercise: e.ex.name, muscle_group: toDbCategory(e.ex),
             sets: 1, reps: seq.length * repsPerStop,
             weight: inLb ? toLb(start) : start,
             notes: null, is_drop_set: true,
@@ -241,7 +251,7 @@ export default function LogWorkoutPage() {
         const doneSets = e.sets.filter(s => s.completed);
         const inLb = e.unit === "kg";
         return {
-          exercise: e.ex.name, muscle_group: e.ex.bodyPart,
+          exercise: e.ex.name, muscle_group: toDbCategory(e.ex),
           sets: doneSets.length,
           reps: parseInt(doneSets[0]?.reps) || 0,
           weight: inLb ? toLb(parseFloat(doneSets[0]?.weight) || 0) : (parseFloat(doneSets[0]?.weight) || null),
@@ -415,9 +425,14 @@ export default function LogWorkoutPage() {
                       {/* Active set */}
                       {activeSet && (
                         <div className="px-4 py-4">
-                          <p className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-3">
-                            Set {doneSets.length + 1}
-                          </p>
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-[10px] font-semibold text-muted uppercase tracking-wide">
+                              Set {doneSets.length + 1}
+                            </p>
+                            {!activeSet.reps && (
+                              <p className="text-[10px] text-muted/60 italic">Enter reps to complete</p>
+                            )}
+                          </div>
                           <div className="flex gap-4 mb-4">
                             {/* Weight */}
                             <div className="flex-1">
@@ -477,8 +492,16 @@ export default function LogWorkoutPage() {
                             </div>
                           </div>
                           <button
-                            onPointerDown={(ev) => { ev.preventDefault(); completeSet(e.uid, activeSet.id); }}
-                            className="w-full py-3.5 rounded-xl bg-accent text-background text-sm font-semibold transition hover:bg-accent-dark active:scale-[0.98]"
+                            onPointerDown={(ev) => {
+                              ev.preventDefault();
+                              if (!activeSet.reps || parseInt(activeSet.reps) < 1) return;
+                              completeSet(e.uid, activeSet.id);
+                            }}
+                            className={`w-full py-3.5 rounded-xl text-sm font-semibold transition active:scale-[0.98] ${
+                              !activeSet.reps || parseInt(activeSet.reps) < 1
+                                ? "bg-surface-hover text-muted cursor-not-allowed opacity-50"
+                                : "bg-accent text-background hover:bg-accent-dark"
+                            }`}
                           >
                             ✓ Complete set
                           </button>
