@@ -114,7 +114,13 @@ export default function LogWorkoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [prevData, setPrevData] = useState<Record<string, PrevData>>({});
   const [mapOpen, setMapOpen] = useState(false);
+  const [workoutDate, setWorkoutDate] = useState(localDateYMD());
   const startRef = useRef(Date.now());
+
+  const todayStr = localDateYMD();
+  const dateLabel = workoutDate === todayStr
+    ? "Today"
+    : new Date(workoutDate + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
   // Timer
   useEffect(() => {
@@ -293,7 +299,7 @@ export default function LogWorkoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_type: sessionType,
-          date: localDateYMD(), // local date — avoids UTC offset logging to wrong day
+          date: workoutDate,
           duration_min: Math.round(elapsed / 60) || null,
           exercises: payload,
         }),
@@ -343,6 +349,22 @@ export default function LogWorkoutPage() {
           <div>
             <p className="text-[10px] text-muted uppercase tracking-wide">Sets</p>
             <p className="text-sm font-semibold">{totalSets}</p>
+          </div>
+          {/* Date picker — tap to backdate */}
+          <div className="ml-auto">
+            <p className="text-[10px] text-muted uppercase tracking-wide mb-0.5">Date</p>
+            <label className="relative cursor-pointer">
+              <span className={`text-sm font-semibold ${workoutDate !== todayStr ? "text-accent" : ""}`}>
+                {dateLabel}
+              </span>
+              <input
+                type="date"
+                value={workoutDate}
+                max={todayStr}
+                onChange={ev => setWorkoutDate(ev.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full"
+              />
+            </label>
           </div>
         </div>
       </div>
