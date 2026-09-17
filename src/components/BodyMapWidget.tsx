@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import AnatomyFigure, { type MuscleStatus } from "@/components/AnatomyFigure";
+import MuscleBodyMap from "@/components/MuscleBodyMap";
 import { localDateYMD } from "@/lib/utils";
 
 interface Props {
@@ -20,23 +20,7 @@ function dayLabel(dateStr: string): string {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-// All known muscle groups for the widget
-const ALL_MUSCLES = [
-  "Chest","Shoulders","Biceps","Triceps","Forearms",
-  "Abs","Obliques","Lower Back","Lats","Traps","Upper Back",
-  "Glutes","Quads","Hamstrings","Adductors","Abductors","Calves","Neck",
-];
-
 export default function BodyMapWidget({ muscles, lastDate }: Props) {
-  const trained = new Set(muscles.map(m => m.toLowerCase()));
-
-  const muscleStatus = Object.fromEntries(
-    ALL_MUSCLES.map(m => [
-      m,
-      trained.has(m.toLowerCase()) ? ("trained" as MuscleStatus) : ("none" as MuscleStatus),
-    ])
-  ) as Record<string, MuscleStatus>;
-
   return (
     <div className="rounded-2xl border border-border bg-surface overflow-hidden">
       {/* Header */}
@@ -50,9 +34,25 @@ export default function BodyMapWidget({ muscles, lastDate }: Props) {
         </Link>
       </div>
 
-      {/* Figure */}
-      <div className="bg-white mx-3 mb-3 rounded-xl overflow-hidden">
-        <AnatomyFigure muscleStatus={muscleStatus} />
+      {/* Muscle figure */}
+      <div className="px-4 py-3 flex justify-center">
+        <MuscleBodyMap
+          primary={muscles}
+          viewWidth={90}
+          viewHeight={180}
+        />
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 px-4 pb-3">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-sm bg-red-500" />
+          <span className="text-[10px] text-muted">Trained</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-sm" style={{ background: "#374151" }} />
+          <span className="text-[10px] text-muted">Rested</span>
+        </div>
       </div>
 
       {/* Muscle tags */}

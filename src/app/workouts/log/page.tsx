@@ -1,10 +1,10 @@
 "use client";
-import { ArrowLeft, ChevronDown, ChevronUp, Dumbbell, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ExercisePicker, { ExerciseResult } from "@/components/ExercisePicker";
-import MuscleMapPanel from "@/components/MuscleMapPanel";
+import MuscleBodyMap from "@/components/MuscleBodyMap";
 import { localDateYMD } from "@/lib/utils";
 
 // ─── Muscle → DB category mapping ─────────────────────────────────────────────
@@ -96,6 +96,7 @@ export default function LogWorkoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prevData, setPrevData] = useState<Record<string, PrevData>>({});
+  const [mapOpen, setMapOpen] = useState(false);
   const startRef = useRef(Date.now());
 
   // Timer
@@ -104,7 +105,10 @@ export default function LogWorkoutPage() {
     return () => clearInterval(id);
   }, []);
 
-  // Muscle map — union of all logged exercises
+  // Open muscle map by default on desktop
+  useEffect(() => { setMapOpen(window.innerWidth >= 1024); }, []);
+
+  // Muscle map — union of all logged exercises' primary muscles
   const mapPrimary = useMemo(() => {
     const seen = new Set<string>();
     exercises.forEach(e => { if (e.ex.target) seen.add(e.ex.target); });
@@ -626,8 +630,47 @@ export default function LogWorkoutPage() {
         </div>{/* max-w-2xl */}
         </div>{/* scroll container */}
 
-        {/* Muscle map panel — visible on all screen sizes, starts collapsed on mobile */}
-        <MuscleMapPanel primary={mapPrimary} secondary={mapSecondary} />
+        {/* Muscle map panel */}
+        <div
+          className="shrink-0 border-l border-border bg-surface flex flex-col items-center transition-all duration-200 overflow-hidden"
+          style={{ width: mapOpen ? 120 : 28 }}
+        >
+          {/* Toggle strip */}
+          <button
+            onClick={() => setMapOpen(o => !o)}
+            className="w-full flex items-center justify-center py-2.5 text-muted hover:text-foreground border-b border-border/50 transition shrink-0"
+            aria-label={mapOpen ? "Hide muscle map" : "Show muscle map"}
+          >
+            {mapOpen ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
+          </button>
+
+          {mapOpen && (
+            <div className="flex flex-col items-center gap-2 py-3 w-full overflow-y-auto" style={{ scrollbarWidth: "none" }}>
+              <p className="text-[8px] font-bold uppercase tracking-widest text-muted/70 leading-none">Muscles</p>
+              <MuscleBodyMap
+                primary={mapPrimary}
+                secondary={mapSecondary}
+                viewWidth={44}
+                viewHeight={88}
+              />
+              <div className="flex flex-col gap-1 w-full px-2 mt-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-sm shrink-0 bg-red-500" />
+                  <span className="text-[8px] text-muted/70 leading-none">Primary</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-sm shrink-0 bg-orange-500" />
+                  <span className="text-[8px] text-muted/70 leading-none">Secondary</span>
+                </div>
+              </div>
+              {(mapPrimary.length > 0 || mapSecondary.length > 0) && (
+                <p className="text-[8px] text-muted/50 text-center mt-1">
+                  {mapPrimary.length}p · {mapSecondary.length}s
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
       </div>{/* flex row body */}
     </div>
