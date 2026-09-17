@@ -25,13 +25,30 @@ function toDbCategory(ex: ExerciseResult): string {
   return "Mixed";
 }
 
+// ─── Time-under-tension exercise detection ────────────────────────────────────
+// These auto-default to "timed" mode when added. Any exercise can be manually
+// toggled to timed mode regardless.
+const TIMED_EXERCISE_KEYWORDS = [
+  "handstand", "iron cross", "front lever", "back lever", "planche",
+  "l-sit", "l sit", "lsit", "human flag", "maltese", "straddle",
+  "hollow body hold", "hollow hold", "arch hold", "support hold",
+  "ring support", "tuck hold", "skin the cat hold", "german hang",
+  "wrist stand", "elbow lever", "crane", "crow hold",
+];
+
+function isTimedExercise(name: string): boolean {
+  const lower = name.toLowerCase();
+  return TIMED_EXERCISE_KEYWORDS.some(kw => lower.includes(kw));
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Unit = "lb" | "kg";
+type ExMode = "standard" | "drop" | "timed";
 
 interface ActiveSet {
   id: number;
   weight: string;
-  reps: string;
+  reps: string;   // stores reps for standard mode, seconds for timed mode
   completed: boolean;
 }
 
@@ -46,7 +63,7 @@ interface WorkoutExercise {
   uid: number;
   ex: ExerciseResult;
   unit: Unit;
-  mode: "standard" | "drop";
+  mode: ExMode;
   sets: ActiveSet[];
   drop: DropConfig;
   expanded: boolean;
@@ -157,8 +174,9 @@ export default function LogWorkoutPage() {
 
   // Add exercise from picker
   function handleAdd(ex: ExerciseResult) {
+    const defaultMode: ExMode = isTimedExercise(ex.name) ? "timed" : "standard";
     const row: WorkoutExercise = {
-      uid: UID++, ex, unit: "lb", mode: "standard",
+      uid: UID++, ex, unit: "lb", mode: defaultMode,
       sets: [newSet()], drop: { start: "", dropPer: "", end: "", repsPerStop: "" },
       expanded: true,
     };
@@ -176,7 +194,7 @@ export default function LogWorkoutPage() {
       if (e.uid !== uid) return e;
       const step = field === "weight"
         ? (e.unit === "kg" ? 1.25 : 2.5)
-        : 1;
+        : e.mode === "timed" ? 5 : 1;  // 5-second increments for timed mode
       const sets = e.sets.map(s => {
         if (s.id !== sid) return s;
         const cur = parseFloat(s[field]) || 0;
@@ -254,12 +272,14 @@ export default function LogWorkoutPage() {
         }
         const doneSets = e.sets.filter(s => s.completed);
         const inLb = e.unit === "kg";
+        const isTimed = e.mode === "timed";
         return {
           exercise: e.ex.name, muscle_group: toDbCategory(e.ex),
           sets: doneSets.length,
-          reps: parseInt(doneSets[0]?.reps) || 0,
+          reps: parseInt(doneSets[0]?.reps) || 0,   // seconds when timed
           weight: inLb ? toLb(parseFloat(doneSets[0]?.weight) || 0) : (parseFloat(doneSets[0]?.weight) || null),
-          notes: null, is_drop_set: false,
+          notes: isTimed ? "timed" : null,           // flag for history display
+          is_drop_set: false,
           set_data: doneSets.map((s, i) => ({
             set: i + 1,
             reps: parseInt(s.reps) || 0,
@@ -346,14 +366,16 @@ export default function LogWorkoutPage() {
         {exercises.map((e, idx) => {
           const prev = prevData[e.ex.name];
           const isExpanded = e.expanded;
-          const activeSet = e.mode === "standard" ? e.sets.find(s => !s.completed) : null;
-          const doneSets  = e.mode === "standard" ? e.sets.filter(s => s.completed) : [];
+          const activeSet = (e.mode === "standard" || e.mode === "timed") ? e.sets.find(s => !s.completed) : null;
+          const doneSets  = (e.mode === "standard" || e.mode === "timed") ? e.sets.filter(s => s.completed) : [];
           const ds = e.mode === "drop" && e.drop.start && e.drop.dropPer && e.drop.end
             ? buildDropSeq(parseFloat(e.drop.start), parseFloat(e.drop.dropPer), parseFloat(e.drop.end))
             : [];
 
           return (
-            <div key={e.uid} className={`rounded-2xl border bg-surface overflow-hidden transition-colors ${e.mode === "drop" ? "border-orange-500/40" : "border-border"}`}>
+            <div key={e.uid} className={`rounded-2xl border bg-surface overflow-hidden transition-colors ${
+              e.mode === "drop" ? "border-orange-500/40" : e.mode === "timed" ? "border-blue-500/40" : "border-border"
+            }`}>
               {/* Exercise header */}
               <div
                 className="flex items-center gap-3 px-4 py-3 cursor-pointer"
@@ -373,6 +395,9 @@ export default function LogWorkoutPage() {
                     {e.mode === "drop" && (
                       <span className="rounded-md bg-orange-500/20 px-1.5 py-0.5 text-[9px] font-bold text-orange-400">DROP</span>
                     )}
+                    {e.mode === "timed" && (
+                      <span className="rounded-md bg-blue-500/20 px-1.5 py-0.5 text-[9px] font-bold text-blue-400">⏱ TIMED</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -390,8 +415,12 @@ export default function LogWorkoutPage() {
                 <div className="border-t border-border">
                   {/* Mode toggle + unit toggle */}
                   <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50">
+                    {/* Drop Set toggle */}
                     <button
-                      onClick={() => update(e.uid, { mode: e.mode === "drop" ? "standard" : "drop", sets: [newSet()] })}
+                      onClick={() => update(e.uid, {
+                        mode: e.mode === "drop" ? "standard" : "drop",
+                        sets: [newSet()],
+                      })}
                       className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
                         e.mode === "drop"
                           ? "bg-orange-500/20 text-orange-400"
@@ -399,6 +428,20 @@ export default function LogWorkoutPage() {
                       }`}
                     >
                       Drop Set
+                    </button>
+                    {/* Timed toggle */}
+                    <button
+                      onClick={() => update(e.uid, {
+                        mode: e.mode === "timed" ? "standard" : "timed",
+                        sets: [newSet()],
+                      })}
+                      className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                        e.mode === "timed"
+                          ? "bg-blue-500/20 text-blue-400"
+                          : "text-muted hover:bg-surface-hover hover:text-foreground"
+                      }`}
+                    >
+                      Timed
                     </button>
                     <div className="ml-auto flex rounded-lg overflow-hidden border border-border">
                       <button
@@ -413,13 +456,26 @@ export default function LogWorkoutPage() {
                   </div>
 
                   {/* ── STANDARD MODE ── */}
-                  {e.mode === "standard" && (
+                  {(e.mode === "standard" || e.mode === "timed") && (() => {
+                    const isTimed = e.mode === "timed";
+                    const repLabel = isTimed ? "Seconds" : "Reps";
+                    const repUnit  = isTimed ? "sec" : "reps";
+                    const repStep  = isTimed ? "5" : "1";
+                    const completeLabel = isTimed ? "✓ Log hold" : "✓ Complete set";
+                    const hintText = isTimed ? "Enter seconds to log" : "Enter reps to complete";
+
+                    return (
                     <div>
                       {/* Completed sets */}
                       {doneSets.map((s, i) => (
                         <div key={s.id} className="flex items-center justify-between px-4 py-2.5 border-b border-border/40">
                           <span className="text-xs text-muted">Set {i + 1}</span>
-                          <span className="text-sm font-medium">{s.weight || "BW"} {e.unit} × {s.reps} reps</span>
+                          <span className="text-sm font-medium">
+                            {isTimed
+                              ? <>{s.weight ? `${s.weight} ${e.unit} · ` : ""}<span className="text-blue-400 font-semibold">{s.reps}s</span></>
+                              : <>{s.weight || "BW"} {e.unit} × {s.reps} {repUnit}</>
+                            }
+                          </span>
                           <button onClick={() => removeSet(e.uid, s.id)} className="text-muted hover:text-foreground">
                             <Trash2 size={12} />
                           </button>
@@ -428,19 +484,21 @@ export default function LogWorkoutPage() {
 
                       {/* Active set */}
                       {activeSet && (
-                        <div className="px-4 py-4">
+                        <div className={`px-4 py-4 ${isTimed ? "bg-blue-500/5" : ""}`}>
                           <div className="flex items-center justify-between mb-3">
-                            <p className="text-[10px] font-semibold text-muted uppercase tracking-wide">
-                              Set {doneSets.length + 1}
+                            <p className={`text-[10px] font-semibold uppercase tracking-wide ${isTimed ? "text-blue-400" : "text-muted"}`}>
+                              {isTimed ? `⏱ Hold ${doneSets.length + 1}` : `Set ${doneSets.length + 1}`}
                             </p>
                             {!activeSet.reps && (
-                              <p className="text-[10px] text-muted/60 italic">Enter reps to complete</p>
+                              <p className="text-[10px] text-muted/60 italic">{hintText}</p>
                             )}
                           </div>
-                          <div className="flex gap-4 mb-4">
-                            {/* Weight */}
+                          <div className={`flex mb-4 ${isTimed ? "gap-4" : "gap-4"}`}>
+                            {/* Weight (optional for timed) */}
                             <div className="flex-1">
-                              <p className="text-[10px] text-muted uppercase tracking-wide mb-2">Weight ({e.unit})</p>
+                              <p className="text-[10px] text-muted uppercase tracking-wide mb-2">
+                                {isTimed ? `Added weight (${e.unit})` : `Weight (${e.unit})`}
+                              </p>
                               <div className="flex items-center gap-0">
                                 <button
                                   onClick={() => adjustSet(e.uid, activeSet.id, "weight", -1)}
@@ -466,15 +524,17 @@ export default function LogWorkoutPage() {
                                 >+</button>
                               </div>
                             </div>
-                            {/* Reps */}
+                            {/* Reps / Seconds */}
                             <div className="flex-1">
-                              <p className="text-[10px] text-muted uppercase tracking-wide mb-2">Reps</p>
+                              <p className={`text-[10px] uppercase tracking-wide mb-2 ${isTimed ? "text-blue-400" : "text-muted"}`}>
+                                {repLabel}
+                              </p>
                               <div className="flex items-center gap-0">
                                 <button
                                   onClick={() => adjustSet(e.uid, activeSet.id, "reps", -1)}
-                                  className="w-11 h-14 rounded-l-xl bg-surface-hover text-foreground text-xl font-light flex items-center justify-center active:bg-border transition"
+                                  className={`w-11 h-14 rounded-l-xl text-foreground text-xl font-light flex items-center justify-center active:bg-border transition ${isTimed ? "bg-blue-500/10" : "bg-surface-hover"}`}
                                 >−</button>
-                                <div className="flex-1 h-14 bg-surface-hover flex items-center justify-center">
+                                <div className={`flex-1 h-14 flex items-center justify-center ${isTimed ? "bg-blue-500/10" : "bg-surface-hover"}`}>
                                   <input
                                     type="number"
                                     value={activeSet.reps}
@@ -483,16 +543,23 @@ export default function LogWorkoutPage() {
                                         ...ex, sets: ex.sets.map(s => s.id === activeSet.id ? { ...s, reps: ev.target.value } : s)
                                       }
                                     ))}
-                                    className="w-full text-center text-3xl font-semibold bg-transparent text-foreground focus:outline-none"
-                                    placeholder="0"
-                                    step="1"
+                                    className={`w-full text-center text-3xl font-semibold bg-transparent focus:outline-none ${isTimed ? "text-blue-400" : "text-foreground"}`}
+                                    placeholder={isTimed ? "30" : "0"}
+                                    step={repStep}
                                   />
                                 </div>
                                 <button
                                   onClick={() => adjustSet(e.uid, activeSet.id, "reps", 1)}
-                                  className="w-11 h-14 rounded-r-xl bg-surface-hover text-foreground text-xl font-light flex items-center justify-center active:bg-border transition"
+                                  className={`w-11 h-14 rounded-r-xl text-foreground text-xl font-light flex items-center justify-center active:bg-border transition ${isTimed ? "bg-blue-500/10" : "bg-surface-hover"}`}
                                 >+</button>
                               </div>
+                              {isTimed && activeSet.reps && (
+                                <p className="text-center text-[10px] text-blue-400/70 mt-1">
+                                  {parseInt(activeSet.reps) >= 60
+                                    ? `${Math.floor(parseInt(activeSet.reps)/60)}m ${parseInt(activeSet.reps)%60}s`
+                                    : `${activeSet.reps}s`}
+                                </p>
+                              )}
                             </div>
                           </div>
                           <button
@@ -504,10 +571,12 @@ export default function LogWorkoutPage() {
                             className={`w-full py-3.5 rounded-xl text-sm font-semibold transition active:scale-[0.98] ${
                               !activeSet.reps || parseInt(activeSet.reps) < 1
                                 ? "bg-surface-hover text-muted cursor-not-allowed opacity-50"
-                                : "bg-accent text-background hover:bg-accent-dark"
+                                : isTimed
+                                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                                  : "bg-accent text-background hover:bg-accent-dark"
                             }`}
                           >
-                            ✓ Complete set
+                            {completeLabel}
                           </button>
                         </div>
                       )}
@@ -518,11 +587,12 @@ export default function LogWorkoutPage() {
                           onPointerDown={(ev) => { ev.preventDefault(); update(e.uid, { sets: [...e.sets, newSet(e.sets.at(-1)?.weight, e.sets.at(-1)?.reps)] }); }}
                           className="w-full py-3 text-sm text-muted hover:text-foreground border-t border-border/40 transition"
                         >
-                          + Add set
+                          + Add {isTimed ? "hold" : "set"}
                         </button>
                       )}
                     </div>
-                  )}
+                    );
+                  })()}
 
                   {/* ── DROP SET MODE ── */}
                   {e.mode === "drop" && (
